@@ -1,0 +1,18 @@
+LEIA PRIMEIRO - Catyami Otimizacao Celular
+================================================
+
+Abra o arquivo 01_guia_otimizacao.html no navegador do seu celular Android.
+
+Ele contem todas as instrucoes detalhadas para otimizar seu dispositivo.
+
+Passos rapidos:
+1. Abra a guia no navegador
+2. Siga cada secao na ordem
+3. Reinicie o celular ao final
+
+Para menor ping no celular:
+- Siga a secao "Reduzir Ping/Latencia" no guia HTML
+- Use DNS 1.1.1.1 nas configuracoes Wi-Fi
+- Ative o DNS Privado com 1dot1dot1dot1.cloudflare-dns.com
+
+Suporte: entre em contato via nossa pagina.

@@ -1,0 +1,21 @@
+Windows Registry Editor Version 5.00
+
+; ========================================================
+; Catyami Notebook - Desativar Animacoes para Performance
+; ========================================================
+
+[HKEY_CURRENT_USER\Control Panel\Desktop]
+"FontSmoothing"="2"
+"MenuShowDelay"="0"
+
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced]
+"ListviewAlphaSelect"=dword:00000000
+"ListviewShadow"=dword:00000000
+"TaskbarAnimations"=dword:00000000
+
+[HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics]
+"MinAnimate"="0"
+
+; Reduz transparência para economizar GPU em notebook
+[HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize]
+"EnableTransparencyEffect"=dword:00000000

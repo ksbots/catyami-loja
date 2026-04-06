@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catyami - Guia Android</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:sans-serif;background:#0a0a0a;color:#ccc;padding:1.5rem;line-height:1.7}
+        h1{color:#00ff88;font-size:1.5rem;text-align:center;margin-bottom:1rem}
+        h2{color:#fff;font-size:1.1rem;margin:1.5rem 0 .5rem;padding-top:.5rem;border-top:1px solid #1a1a1a}
+        .step{background:#151515;border-radius:12px;padding:1rem;margin:.75rem 0;border-left:3px solid #00ff88}
+        .step .num{color:#00ff88;font-weight:700}
+        .tip{background:#1a1a2e;border-radius:8px;padding:.75rem;margin:.5rem 0;font-size:.9rem}
+        .tip b{color:#ffd700}
+        .badge{display:inline-block;background:#00ff88;color:#000;padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:700}
+        .badge.ping{background:#ff4757;color:#fff}
+    </style>
+</head>
+<body>
+    <h1>Catyami Otimizacao Android</h1>
+    <p style="text-align:center;opacity:.7">Guia completo para deixar seu Android mais rapido!</p>
+
+    <h2>1. Limpar Cache de Apps</h2>
+    <div class="step">
+        <span class="num">Passo a passo:</span><br>
+        Configuracoes > Apps > Selecione cada app > Armazenamento > Limpar Cache<br>
+        Faca isso para apps pesados: Facebook, Instagram, TikTok, YouTube, Chrome.
+    </div>
+
+    <h2>2. Ativar Opcoes de Desenvolvedor</h2>
+    <div class="step">
+        <span class="num">Passo a passo:</span><br>
+        Configuracoes > Sobre o telefone > Toque 7x em "Numero da versao" (Build Number)<br>
+        Voce vera "Voce e um desenvolvedor!"<br>
+        Depois va em: Configuracoes > Opcoes de desenvolvedor
+    </div>
+
+    <h2>3. Desativar Animacoes (Developer Options)</h2>
+    <div class="step">
+        <span class="num">Dentro de Opcoes de Desenvolvedor, procure:</span><br>
+        - Escala de animacao da janela: <b>Desligar</b><br>
+        - Escala de animacao de transicao: <b>Desligar</b><br>
+        - Escala de duracao do animador: <b>Desligar</b>
+    </div>
+    <div class="tip"><b>Dica:</b> Isso deixa o celular MUITO mais rapido visualmente!</div>
+
+    <h2>4. Desativar/Desinstalar Apps Inuteis</h2>
+    <div class="step">
+        Va em Configuracoes > Apps e revise:<br>
+        - Desative apps de fabrica que voce nao usa<br>
+        - Desinstale apps que nao usa ha +30 dias<br>
+        - Use versoes "Lite" ou "Go" de apps pesados
+    </div>
+    <div class="tip"><b>Apps Lite:</b> Facebook Lite, Instagram Lite, Google Go, Gallery Go, Files Go</div>
+
+    <h2>5. Limpar Lixeira e Downloads</h2>
+    <div class="step">
+        - Abra o app "Files" (arquivos) do Google<br>
+        - Toque em "Limpar" para sugestoes de limpeza<br>
+        - Apague downloads antigos e duplicatas<br>
+        - Limpe a lixeira da galeria
+    </div>
+
+    <h2>6. Otimizar Armazenamento</h2>
+    <div class="step">
+        Configuracoes > Armazenamento > Libere espaco<br>
+        Remova:<br>
+        - WhatsApp media antiga (Config. > Armazenamento e dados > Gerenciar armazenamento)<br>
+        - Downloads duplicados<br>
+        - Screenshots desnecessarios
+    </div>
+
+    <h2>7. Reduzir Ping/Latencia <span class="badge ping">PING</span></h2>
+    <div class="step">
+        <span class="num">Metodo 1 - DNS Wi-Fi (reduz de ~35ms para ~10ms):</span><br>
+        Configuracoes > Wi-Fi > Segure a rede conectada > Gerenciar configuracoes de rede<br>
+        Configuracoes avancadas > DNS estatico<br>
+        DNS 1: <b>1.1.1.1</b> (Cloudflare)<br>
+        DNS 2: <b>8.8.8.8</b> (Google)
+    </div>
+    <div class="step">
+        <span class="num">Metodo 2 - DNS Privado (recomendado):</span><br>
+        Configuracoes > Rede e Internet > DNS Privado<br>
+        Selecione "Nome do host do provedor de DNS privado"<br>
+        Digite: <b>1dot1dot1dot1.cloudflare-dns.com</b>
+    </div>
+    <div class="step">
+        <span class="num">Metodo 3 - Opcoes de desenvolvedor:</span><br>
+        Configuracoes > Opcoes de desenvolvedor > Wi-Fi Verbose Logging: <b>Ativar</b><br>
+        Mobile Data Always Active: <b>Desativar</b> (economiza bateria)
+    </div>
+    <div class="tip"><b>Dica:</b> Use 5GHz Wi-Fi se disponivel - latencia menor que 2.4GHz</div>
+    <div class="tip"><b>Dica pro:</b> Use o Cloudflare Warp (app gratuito) para otimizar rota da rede</div>
+
+    <h2>8. Apps Recomendados</h2>
+    <div class="step">
+        <b>Para monitorar:</b><br>
+        - AccuBattery (saude da bateria)<br>
+        - CPU-Z (info do hardware)<br>
+        - SD Maid (limpeza avancada)<br>
+        - Files by Google (gerenciar arquivos)<br>
+        - Cloudflare 1.1.1.1 (DNS mais rapido)
+    </div>
+
+    <h2>9. Reiniciar Periodicamente</h2>
+    <div class="step">
+        Reinicie o celular pelo menos 1 vez por semana. Isso libera memoria acumulada e fecha processos travados.
+    </div>
+    <div class="tip"><b>Dica extra:</b> Nao use apps de "limpeza RAM" - eles fazem mais mal do que bem no Android moderno.</div>
+
+    <h2>10. Atualizacoes</h2>
+    <div class="step">
+        Mantenha o Android atualizado. Va em: Configuracoes > Sistema > Atualizacao do sistema<br>
+        Tambem atualize apps pela Play Store regularmente.
+    </div>
+
+    <p style="text-align:center;margin-top:2rem;color:#00ff88;font-weight:700">Catyami Otimizacao - Todos os direitos reservados</p>
+</body>
+</html>

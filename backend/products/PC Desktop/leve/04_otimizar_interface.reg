@@ -1,0 +1,27 @@
+Windows Registry Editor Version 5.00
+
+; ========================================================
+; Catyami Otimizacao - Ajustes de Interface
+; ========================================================
+
+; Acelerar tempo de exibicao de menus (50ms)
+[HKEY_CURRENT_USER\Control Panel\Desktop]
+"MenuShowDelay"="50"
+
+; Remover sufixo "Atalho" ao criar atalhos
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer]
+"link"=hex:00,00,00,00
+
+; Desabilitar animacoes de minimizar/maximizar
+[HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics]
+"MinAnimate"="0"
+
+; Aumentar velocidade do mouse
+[HKEY_CURRENT_USER\Control Panel\Mouse]
+"MouseSpeed"="0"
+"MouseThreshold1"="0"
+"MouseThreshold2"="0"
+
+; Desabilitar transparencia no menu iniciar
+[HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize]
+"EnableTransparencyEffect"=dword:00000000

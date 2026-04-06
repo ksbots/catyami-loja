@@ -1,0 +1,26 @@
+LEIA PRIMEIRO - Catyami Otimizacao Notebook
+================================================
+
+1. Execute os scripts como ADMINISTRADOR (botao direito > Executar como administrador).
+
+2. ORDEM RECOMENDADA:
+   01_limpeza_basica.bat
+   02_energia_notebook.bat
+   03_desativar_animacoes.reg (de duplo clique e confirme)
+   04_plano_bateria.bat
+   05_desativar_servicos.bat
+   06_otimizar_wifi.bat
+   07_limpar_background.bat
+   08_modo_viagem.bat (use apenas quando preciso)
+   09_otimizar_ping.bat (reduz ping de ~35ms para ~10ms!)
+
+3. PARA REVERTER QUALQUER ALTERACAO:
+   Pesquise o comando no Google para entender o que ele faz.
+
+4. O script 08_modo_viagem.bat e EXTREMO. Use apenas quando precisar
+   de maxima autonomia ou performance sem Wi-Fi.
+
+5. Para menor ping: execute 06_otimizar_wifi.bat e 09_otimizar_ping.bat
+
+Suporte: entre em contato via nossa pagina.
+Boa otimizacao!

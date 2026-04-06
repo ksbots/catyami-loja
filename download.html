@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catyami - Download do Produto</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        :root{--bg:#0a0a0a;--card:#151515;--text:#a0a0a0;--white:#f0f0f0;--accent:#00ff88;--border:#2a2a2a;--danger:#ff4757;--yellow:#ffd700}
+        body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center}
+        .container{text-align:center;padding:2rem;max-width:500px;width:100%}
+        .logo{font-size:1.3rem;font-weight:700;color:var(--white);margin-bottom:2rem}
+        .logo span{color:var(--accent)}
+        .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2rem}
+        .loading i{font-size:3rem;color:var(--accent);animation:spin 1s linear infinite;margin-bottom:1rem}
+        @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+        .success i{font-size:3rem;color:var(--accent);margin-bottom:1rem}
+        .success h2{color:var(--white);margin-bottom:.5rem}
+        .error i{font-size:3rem;color:var(--danger);margin-bottom:1rem}
+        .error h2{color:var(--white);margin-bottom:.5rem}
+        .download-links{display:flex;flex-direction:column;gap:.75rem;margin-top:1.5rem}
+        .dl-btn{display:flex;align-items:center;justify-content:center;gap:.5rem;padding:1rem;background:var(--accent);color:var(--bg);border-radius:12px;text-decoration:none;font-weight:700;font-size:1rem;transition:opacity .3s}
+        .dl-btn:hover{opacity:.85}
+        .dl-btn.small{background:transparent;border:1px solid var(--border);color:var(--text);font-size:.85rem}
+        .status-bar{padding:.75rem;border-radius:8px;margin-bottom:1rem;font-size:.9rem}
+        .status-bar.pending{background:rgba(255,215,0,.1);color:var(--yellow)}
+        .status-bar.approved{background:rgba(0,255,136,.1);color:var(--accent)}
+        footer{margin-top:1.5rem;font-size:.75rem;opacity:.3}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">CATYAMI <span>OTIMIZACAO</span></div>
+        <div class="card" id="content">
+            <div class="loading"><i class="fas fa-circle-notch"></i><br>Verificando pedido...</div>
+        </div>
+        <footer>Catyami Otimizacao - Todos os direitos reservados</footer>
+    </div>
+
+    <script>
+    const params = new URLSearchParams(window.location.search);
+    const orderId = params.get('order');
+
+    window.addEventListener('load', async () => {
+        if (!orderId) {
+            return show('No order specified', 'error');
+        }
+
+        let attempts = 0;
+        const maxAttempts = 60; // 5 minutes polling
+
+        async function check() {
+            if (attempts >= maxAttempts) return show('Tempo expired. Contate o suporte.', 'error');
+            attempts++;
+            try {
+                const res = await fetch(`/api/order/${orderId}`);
+                const order = await res.json();
+
+                if (order.status === 'approved' || order.status === 'confirmed') {
+                    showApproved(order);
+                } else if (order.status === 'rejected') {
+                    show('Pagamento rejeitado. Contate o suporte.', 'error');
+                } else {
+                    showPending(order);
+                    setTimeout(check, 5000);
+                }
+            } catch(e) {
+                setTimeout(check, 5000);
+            }
+        }
+        check();
+    });
+
+    function show(html, type) {
+        const icon = type === 'error' ? 'fa-times-circle' : 'fa-circle-notch';
+        document.getElementById('content').innerHTML = `
+            <div class="${type}"><i class="fas ${icon}"></i><h2>${type === 'error' ? 'Erro' : 'Aguardando'}</h2><p>${html}</p></div>
+        `;
+    }
+
+    function showPending(order) {
+        document.getElementById('content').innerHTML = `
+            <div class="status-bar pending"><i class="fas fa-clock"></i> Aguardando Confirmacao do Pagamento...</div>
+            <p style="margin-top:1rem">Produto: <strong style="color:var(--white)">${order.product_name}</strong></p>
+            <p style="margin-top:.5rem;opacity:.5;font-size:.85rem">Verificando a cada 5 segundos...</p>
+        `;
+    }
+
+    function showApproved(order) {
+        const products = order.product === 'combo' ? ['pc','notebook','celular'] : [order.product];
+        const productNames = {pc:'PC Desktop',notebook:'Notebook',celular:'Celular (Android)'};
+
+        let links = products.map(p =>
+            `<a href="/api/download/${order.id}/${p}" class="dl-btn"><i class="fas fa-download"></i> Baixar ${productNames[p]}</a>`
+        ).join('');
+
+        document.getElementById('content').innerHTML = `
+            <div class="success"><i class="fas fa-check-circle"></i><h2>Pagamento Confirmado!</h2><p>${order.product_name} - R$ ${order.price.toFixed(2).replace('.',',')}</p></div>
+            <div class="download-links">${links}</div>
+        `;
+    }
+    </script>
+</body>
+</html>

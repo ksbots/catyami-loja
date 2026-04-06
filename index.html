@@ -22,6 +22,33 @@
     nav ul{list-style:none;display:flex;gap:1.5rem}
     nav ul li a{color:var(--text);font-weight:500;transition:color .3s}
     nav ul li a:hover{color:var(--white)}
+    /* ==================== CARRINHO ==================== */
+    .cart-icon{position:relative;cursor:pointer}
+    .cart-icon i{font-size:1.1rem}
+    .cart-badge{position:absolute;top:-8px;right:-12px;background:var(--accent);color:var(--bg);font-size:.6rem;font-weight:700;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+    .cart-slide{position:fixed;top:0;right:-400px;width:380px;max-width:100%;height:100vh;background:var(--card);border-left:1px solid var(--border);z-index:2001;transition:right .3s ease;display:flex;flex-direction:column}
+    .cart-slide.open{right:0}
+    .cart-header{padding:1.5rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+    .cart-header h3{color:var(--white);font-size:1.1rem}
+    .cart-header .close{background:none;border:none;color:var(--text);font-size:1.3rem;cursor:pointer}
+    .cart-header .close:hover{color:var(--white)}
+    .cart-items{flex:1;overflow-y:auto}
+    .cart-item{display:flex;align-items:center;gap:1rem;padding:1rem 1.5rem;border-bottom:1px solid var(--border)}
+    .cart-item .item-icon{width:45px;height:45px;border-radius:10px;background:#1a1a1a;display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:1.1rem}
+    .cart-item .item-info{flex:1}
+    .cart-item .item-info h4{color:var(--white);font-size:.9rem}
+    .cart-item .item-info span{color:var(--accent);font-weight:700}
+    .cart-item .remove{background:none;border:none;color:var(--danger);cursor:pointer;font-size:.9rem;opacity:.5;transition:opacity .3s}
+    .cart-item .remove:hover{opacity:1}
+    .cart-empty{text-align:center;padding:3rem;opacity:.4}
+    .cart-empty i{font-size:3rem;margin-bottom:1rem;display:block}
+    .cart-footer{padding:1.5rem;border-top:1px solid var(--border)}
+    .cart-footer .total{display:flex;justify-content:space-between;color:var(--white);font-size:1.1rem;font-weight:700;margin-bottom:1rem}
+    .cart-footer .checkout-btn{width:100%;padding:.9rem;background:var(--accent);color:var(--bg);border:none;border-radius:50px;font-weight:700;font-size:1rem;cursor:pointer;transition:background .3s}
+    .cart-footer .checkout-btn:hover{background:#00dd77}
+    .cart-footer .checkout-btn:disabled{opacity:.4;cursor:not-allowed}
+    .cart-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);z-index:2000}
+    .cart-overlay.open{display:block}
     /* ==================== HERO ==================== */
     .hero{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:2rem 5%;position:relative;overflow:hidden}
     .hero::before{content:'';position:absolute;width:600px;height:600px;background:radial-gradient(circle,rgba(0,255,136,.06) 0%,transparent 70%);border-radius:50%;top:-200px;right:-200px;animation:float 8s ease-in-out infinite}
@@ -126,8 +153,8 @@
         <div class="logo">CATYAMI <span>OTIMIZAÇÃO</span></div>
         <ul>
             <li><a href="#produtos">Produtos</a></li>
-            <li><a href="#historico">Histórico</a></li>
-            <li><a href="#dev">Dev</a></li>
+            <li><a href="#historico">Meus Pedidos</a></li>
+            <li class="cart-icon" onclick="toggleCart()"><i class="fas fa-shopping-cart"></i><span class="cart-badge" id="cartBadge" hidden>0</span></li>
         </ul>
     </nav>
 
@@ -151,10 +178,7 @@
                 <h3>PC Desktop</h3>
                 <p class="desc">Limpeza, ajuste de RAM, serviços, jogos, monitor e muito mais.</p>
                 <div class="price">R$ 19,90</div>
-                <button class="btn btn-sm" onclick="openCheckout('pc')"><i class="fas fa-shopping-cart"></i> Comprar</button>
-                <button class="btn btn-sm" style="background:transparent;color:var(--white);border:1px solid var(--border);margin-top:.5rem;font-size:.8rem;padding:.4rem 1rem;border-radius:50px;cursor:pointer" onclick="downloadDirect('pc')" id="redownload-pc" data-id="pc" hidden>
-                    <i class="fas fa-download"></i> Re-download
-                </button>
+                <button class="btn btn-sm" onclick="addToCart('pc')"><i class="fas fa-cart-plus"></i> Adicionar ao Carrinho</button>
             </div>
             <!-- Notebook -->
             <div class="product-card fade-in" id="card-notebook">
@@ -162,10 +186,7 @@
                 <h3>Notebook</h3>
                 <p class="desc">Scripts para notebooks fracos/medianos, modo viagem, economia de energia.</p>
                 <div class="price">R$ 19,90</div>
-                <button class="btn btn-sm" onclick="openCheckout('notebook')"><i class="fas fa-shopping-cart"></i> Comprar</button>
-                <button class="btn btn-sm" style="background:transparent;color:var(--white);border:1px solid var(--border);margin-top:.5rem;font-size:.8rem;padding:.4rem 1rem;border-radius:50px;cursor:pointer" onclick="downloadDirect('notebook')" id="redownload-notebook" data-id="notebook" hidden>
-                    <i class="fas fa-download"></i> Re-download
-                </button>
+                <button class="btn btn-sm" onclick="addToCart('notebook')"><i class="fas fa-cart-plus"></i> Adicionar ao Carrinho</button>
             </div>
             <!-- Celular -->
             <div class="product-card fade-in" id="card-celular">
@@ -173,10 +194,7 @@
                 <h3>Celular (Android)</h3>
                 <p class="desc">Guia completo com otimizações para dispositivos Android.</p>
                 <div class="price">R$ 19,90</div>
-                <button class="btn btn-sm" onclick="openCheckout('celular')"><i class="fas fa-shopping-cart"></i> Comprar</button>
-                <button class="btn btn-sm" style="background:transparent;color:var(--white);border:1px solid var(--border);margin-top:.5rem;font-size:.8rem;padding:.4rem 1rem;border-radius:50px;cursor:pointer" onclick="downloadDirect('celular')" id="redownload-celular" data-id="celular" hidden>
-                    <i class="fas fa-download"></i> Re-download
-                </button>
+                <button class="btn btn-sm" onclick="addToCart('celular')"><i class="fas fa-cart-plus"></i> Adicionar ao Carrinho</button>
             </div>
             <!-- Combo -->
             <div class="product-card fade-in" id="card-combo">
@@ -184,10 +202,7 @@
                 <h3>Pacote Completo</h3>
                 <p class="desc">Todos os três pacotes com desconto especial.</p>
                 <div class="price">R$ 49,90 <small>(economia de R$ 9,80)</small></div>
-                <button class="btn btn-sm" onclick="openCheckout('combo')"><i class="fas fa-shopping-cart"></i> Comprar</button>
-                <button class="btn btn-sm" style="background:transparent;color:var(--white);border:1px solid var(--border);margin-top:.5rem;font-size:.8rem;padding:.4rem 1rem;border-radius:50px;cursor:pointer" onclick="downloadDirect('combo')" id="redownload-combo" data-id="combo" hidden>
-                    <i class="fas fa-download"></i> Re-download
-                </button>
+                <button class="btn btn-sm" onclick="addToCart('combo')"><i class="fas fa-cart-plus"></i> Adicionar ao Carrinho</button>
             </div>
         </div>
     </section>
@@ -301,6 +316,25 @@ defrag C: /U /V</div>
         </div>
     </div>
 
+    <!-- ==================== CART SLIDE ==================== -->
+    <div class="cart-overlay" id="cartOverlay" onclick="toggleCart()"></div>
+    <div class="cart-slide" id="cartSlide">
+        <div class="cart-header">
+            <h3><i class="fas fa-shopping-cart"></i> Carrinho</h3>
+            <button class="close" onclick="toggleCart()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="cart-items" id="cartItems">
+            <div class="cart-empty" id="cartEmpty">
+                <i class="fas fa-shopping-bag"></i>
+                <p>Seu carrinho esta vazio</p>
+            </div>
+        </div>
+        <div class="cart-footer">
+            <div class="total"><span>Total:</span><span id="cartTotal">R$ 0,00</span></div>
+            <button class="checkout-btn" id="checkoutBtn" onclick="checkout()" disabled><i class="fas fa-lock"></i> Finalizar Compra</button>
+        </div>
+    </div>
+
     <!-- ==================== FOOTER ==================== -->
     <footer>
         <p>&copy; 2026 Catyami Otimizacao. Todos os direitos reservados.</p>
@@ -309,7 +343,9 @@ defrag C: /U /V</div>
     <!-- ==================== JAVASCRIPT ==================== -->
     <script>
     /* ==================== DADOS ==================== */
-    const PIX_KEY = '43427ffd-4432-47f0-b41a-c85272a1f3ca';
+    const API = window.location.origin === 'file://' ? 'http://localhost:5000' : '';
+    // Para deploy no GitHub Pages, altere abaixo para a URL do seu backend:
+    // const API = 'https://SEU-APP.railway.app';
     const PRODUCT_NAMES = {
         pc: 'PC Desktop',
         notebook: 'Notebook',
@@ -318,21 +354,96 @@ defrag C: /U /V</div>
     };
     const PRICES = { pc: 19.90, notebook: 19.90, celular: 19.90, combo: 49.90 };
 
+    /* ==================== CARRINHO ==================== */
+    let cart = JSON.parse(localStorage.getItem('catyami_cart') || '[]');
+
+    function saveCart() { localStorage.setItem('catyami_cart', JSON.stringify(cart)); renderCart(); }
+    function toggleCart() {
+        document.getElementById('cartSlide').classList.toggle('open');
+        document.getElementById('cartOverlay').classList.toggle('open');
+    }
+    function addToCart(product) {
+        if (cart.includes(product)) {
+            return;
+        }
+        if (product === 'combo') { cart = [product]; }
+        else { cart = cart.filter(p => p !== 'combo'); cart.push(product); }
+        saveCart();
+    }
+    function removeFromCart(product) {
+        cart = cart.filter(p => p !== product);
+        saveCart();
+    }
+    function renderCart() {
+        const badge = document.getElementById('cartBadge');
+        const items = document.getElementById('cartItems');
+        const empty = document.getElementById('cartEmpty');
+        const totalEl = document.getElementById('cartTotal');
+        const checkoutBtn = document.getElementById('checkoutBtn');
+
+        if (cart.length === 0) {
+            badge.hidden = true;
+            items.innerHTML = '<div class="cart-empty" id="cartEmpty"><i class="fas fa-shopping-bag"></i><p>Seu carrinho esta vazio</p></div>';
+            totalEl.textContent = 'R$ 0,00';
+            checkoutBtn.disabled = true;
+            return;
+        }
+
+        badge.hidden = false;
+        badge.textContent = cart.length;
+
+        const icons = {pc:'fa-desktop',notebook:'fa-laptop',celular:'fa-mobile-alt',combo:'fa-box-open'};
+        items.innerHTML = cart.map(p => `
+            <div class="cart-item">
+                <div class="item-icon"><i class="fas ${icons[p] || 'fa-shopping-bag'}"></i></div>
+                <div class="item-info">
+                    <h4>${PRODUCT_NAMES[p]}</h4>
+                    <span>R$ ${PRICES[p].toFixed(2).replace('.', ',')}</span>
+                </div>
+                <button class="remove" onclick="removeFromCart('${p}')"><i class="fas fa-trash"></i></button>
+            </div>
+        `).join('');
+
+        const total = cart.reduce((s, p) => s + PRICES[p], 0);
+        totalEl.textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
+        checkoutBtn.disabled = false;
+    }
+
     /* ==================== STATE ==================== */
     let currentProduct = null;
+    let currentOrderId = null;
+    let currentMpPaymentId = null;
     let fileUploaded = false;
+    let uploadedFile = null;
+    let pollingInterval = null;
+    let checkoutProducts = []; // products from cart checkout
 
     /* ==================== INIT ==================== */
     window.addEventListener('load', () => {
-        // scroll animations
         const obs = new IntersectionObserver(e => { e.forEach(el => { if(el.isIntersecting) el.target.classList.add('visible'); }); }, {threshold: 0.1});
         document.querySelectorAll('.fade-in').forEach(el => obs.observe(el));
-        // check purchased
         loadPurchaseState();
+        renderCart();
     });
 
+    /* ==================== CHECKOUT DO CARRINHO ==================== */
+    async function checkout() {
+        if (cart.length === 0) return;
+
+        // Se tem 1 item, checka normal. Se tem varios, cria combo dinamico
+        if (cart.length === 1 && cart[0] === 'combo') {
+            openCheckout('combo');
+        } else if (cart.length === 3 && cart.includes('pc') && cart.includes('notebook') && cart.includes('celular')) {
+            openCheckout('combo');
+        } else {
+            // Multi-item checkout: cria pedido com o primeiro item
+            openCheckout(cart[0]);
+        }
+        toggleCart();
+    }
+
     /* ==================== MODAL ==================== */
-    function openCheckout(product) {
+    async function openCheckout(product) {
         currentProduct = product;
         document.getElementById('checkoutModal').classList.add('active');
         document.getElementById('modalTitle').textContent = 'Comprar - ' + PRODUCT_NAMES[product];
@@ -341,54 +452,165 @@ defrag C: /U /V</div>
         document.getElementById('preview').innerHTML = '';
         document.getElementById('uploadArea').style.display = 'block';
         document.getElementById('confirmBtn').disabled = true;
+        document.getElementById('confirmBtn').textContent = 'Gerando Pix...';
         fileUploaded = false;
-        // generate QR Code
-        document.getElementById('qrCode').innerHTML = '';
-        new QRCode(document.getElementById('qrCode'), { text: PIX_KEY, width: 200, height: 200, colorDark: '#00ff88', colorLight: '#151515' });
-    }
-    function closeModal() { document.getElementById('checkoutModal').classList.remove('active'); }
+        uploadedFile = null;
+        currentOrderId = null;
 
-    /* ==================== PIX ==================== */
-    function copyPixKey() {
-        navigator.clipboard.writeText(PIX_KEY).then(() => {
-            const btn = document.querySelector('.pix-key button');
-            btn.textContent = 'Copiado!';
-            setTimeout(() => btn.textContent = 'Copiar', 2000);
-        });
-    }
+        document.getElementById('qrCode').innerHTML = '<p style="opacity:.5">Gerando QR Code...</p>';
 
-    /* ==================== UPLOAD ==================== */
-    function previewFile(input) {
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                document.getElementById('preview').innerHTML = '<img src="' + e.target.result + '">';
-            };
-            reader.readAsDataURL(input.files[0]);
+        try {
+            const res = await fetch(`${API}/api/create-order`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product })
+            });
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.error || 'Erro ao criar pedido');
+
+            currentOrderId = data.order_id;
+            currentMpPaymentId = data.mp_payment_id;
+
+            // QR Code do MercadoPago
+            document.getElementById('qrCode').innerHTML = '';
+            if (data.qr_code_base64) {
+                document.getElementById('qrCode').innerHTML = `<img src="data:image/png;base64,${data.qr_code_base64}" style="width:200px;height:200px;border-radius:8px;">`;
+            } else if (data.qr_code) {
+                new QRCode(document.getElementById('qrCode'), { text: data.qr_code, width: 200, height: 200, colorDark: '#00ff88', colorLight: '#151515' });
+            } else {
+                document.getElementById('qrCode').innerHTML = '<p style="color:var(--danger)">Erro ao gerar QR Code</p>';
+            }
+
+            // Se tiver ticket_url, abre no MP
+            if (data.ticket_url) {
+                document.getElementById('pixKeyInput').value = data.ticket_url;
+                document.querySelector('.pix-key button').textContent = 'Abrir MP';
+                document.querySelector('.pix-key button').onclick = () => window.open(data.ticket_url, '_blank');
+            }
+
+            document.getElementById('confirmBtn').textContent = 'Ja paguei, confirmar';
             document.getElementById('confirmBtn').disabled = false;
-            fileUploaded = true;
+
+            // Inicia polling do status
+            startPolling();
+
+        } catch (e) {
+            console.log('Erro:', e);
+            document.getElementById('qrCode').innerHTML = `<p style="color:var(--danger)">Erro ao conectar ao servidor. Verifique se o backend esta rodando.</p>`;
+            document.getElementById('confirmBtn').textContent = 'Erro';
         }
     }
 
+    function closeModal() {
+        document.getElementById('checkoutModal').classList.remove('active');
+        stopPolling();
+    }
+
+    /* ==================== POLLING ==================== */
+    function startPolling() {
+        stopPolling();
+        pollingInterval = setInterval(async () => {
+            if (!currentOrderId) return;
+            try {
+                const res = await fetch(`${API}/api/order/${currentOrderId}`);
+                const order = await res.json();
+                if (order.status === 'approved') {
+                    stopPolling();
+                    showSuccess(currentProduct);
+                }
+            } catch (e) {}
+        }, 5000);
+    }
+
+    function stopPolling() {
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+            pollingInterval = null;
+        }
+    }
+
+    // Upload de comprovante
+    document.addEventListener('DOMContentLoaded', () => {
+        const fileInput = document.getElementById('fileInput');
+        if (fileInput) {
+            fileInput.addEventListener('change', async (e) => {
+                if (!e.target.files[0] || !currentOrderId) return;
+                uploadedFile = e.target.files[0];
+
+                // Preview
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    document.getElementById('preview').innerHTML = '<img src="' + ev.target.result + '">';
+                };
+                reader.readAsDataURL(uploadedFile);
+                fileUploaded = true;
+
+                // Envia para o backend
+                const formData = new FormData();
+                formData.append('receipt', uploadedFile);
+
+                try {
+                    const res = await fetch(`${API}/api/order/${currentOrderId}/receipt`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if (res.ok) {
+                        const btn = document.querySelector('.upload-area p');
+                        if (btn) btn.textContent = 'Comprovante enviado!';
+                        btn.style.color = 'var(--accent)';
+                    }
+                } catch (e) { console.log('Erro ao enviar comprovante:', e); }
+            });
+        }
+    });
+
     /* ==================== CONFIRMAR ==================== */
-    function confirmPayment() {
-        if (!fileUploaded) return;
-        // save purchase
-        savePurchase(currentProduct);
-        // show success
+    async function confirmPayment() {
+        const btn = document.getElementById('confirmBtn');
+        btn.textContent = 'Verificando...';
+        btn.disabled = true;
+
+        // Consulta status atualizado
+        try {
+            const res = await fetch(`${API}/api/order/${currentOrderId}`);
+            const order = await res.json();
+            if (order.status === 'approved') {
+                showSuccess(currentProduct);
+            } else {
+                btn.textContent = 'Aguardando pagamento...';
+                setTimeout(() => {
+                    btn.textContent = 'Ja paguei, confirmar';
+                    btn.disabled = false;
+                }, 3000);
+            }
+        } catch (e) {
+            btn.textContent = 'Erro na verificacao';
+            setTimeout(() => {
+                btn.textContent = 'Ja paguei, confirmar';
+                btn.disabled = false;
+            }, 3000);
+        }
+    }
+
+    function showSuccess(product) {
         document.getElementById('stepPix').style.display = 'none';
         document.getElementById('stepSuccess').style.display = 'block';
-        // build download buttons
         const container = document.getElementById('downloadBtns');
         container.innerHTML = '';
-        const products = currentProduct === 'combo' ? ['pc', 'notebook', 'celular'] : [currentProduct];
+        const products = product === 'combo' ? ['pc', 'notebook', 'celular'] : [product];
         products.forEach(p => {
-            const btn = document.createElement('button');
+            const btn = document.createElement('a');
             btn.className = 'btn btn-sm';
+            btn.href = `/download.html?order=${currentOrderId}`;
             btn.innerHTML = '<i class="fas fa-download"></i> ' + PRODUCT_NAMES[p];
-            btn.onclick = () => generateZip(p);
+            btn.target = '_blank';
             container.appendChild(btn);
         });
+        savePurchase(product);
+        // Limpa carrinho
+        cart = cart.filter(p => !products.includes(p));
+        saveCart();
     }
 
     /* ==================== LOCAL STORAGE ==================== */
@@ -402,26 +624,55 @@ defrag C: /U /V</div>
 
     function loadPurchaseState() {
         const purchases = JSON.parse(localStorage.getItem('catyami_purchases') || '{}');
-        ['pc', 'notebook', 'celular'].forEach(id => {
-            const card = document.getElementById('card-' + id);
-            const btn = document.getElementById('redownload-' + id);
-            if (purchases[id] || purchases['combo']) {
-                card.classList.add('purchased');
-                btn.hidden = false;
-            }
-        });
-        if (purchases['combo']) {
-            document.getElementById('card-combo').classList.add('purchased');
-            document.getElementById('redownload-combo').hidden = false;
-        }
-        // Desbloquear secao Dev para clientes
         const hasPurchase = Object.keys(purchases).length > 0;
         document.getElementById('devBlocked').hidden = hasPurchase;
         document.getElementById('devUnlocked').hidden = !hasPurchase;
-        renderHistory();
+        loadOrdersFromBackend();
     }
 
-    function renderHistory() {
+    // Carrega pedidos reais do backend para historico
+    async function loadOrdersFromBackend() {
+        try {
+            const res = await fetch(`${API}/api/admin/orders`);
+            const orders = await res.json();
+            const approved = orders.filter(o => ['approved','confirmed'].includes(o.status));
+            const pending = orders.filter(o => o.status === 'pending');
+            const list = document.getElementById('historyList');
+            const empty = document.getElementById('emptyHistory');
+
+            if (approved.length === 0 && pending.length === 0) {
+                list.innerHTML = '';
+                list.appendChild(empty);
+                empty.style.display = 'block';
+                return;
+            }
+
+            const icons = {pc:'fa-desktop',notebook:'fa-laptop',celular:'fa-mobile-alt',combo:'fa-box-open'};
+            approved.reverse();
+            pending.reverse();
+            let html = '';
+            if (pending.length > 0) {
+                html += '<h3 style="color:var(--yellow);margin-bottom:1rem;font-size:1rem"><i class="fas fa-clock"></i> Pendentes</h3>';
+                pending.forEach(o => {
+                    const date = new Date(o.created_at).toLocaleDateString('pt-BR');
+                    html += `<div class="history-item"><div class="info"><i class="fas fa-clock" style="color:var(--yellow)"></i><div class="meta"><h4>${o.product_name}</h4><span>${date} - R$ ${o.price.toFixed(2).replace('.', ',')} - Aguardando</span></div></div><div class="actions"><a href="/download.html?order=${o.id}" target="_blank" style="color:var(--accent);font-size:.85rem"><i class="fas fa-eye"></i> Verificar</a></div></div>`;
+                });
+            }
+            if (approved.length > 0) {
+                html += '<h3 style="color:var(--accent);margin:1.5rem 0 1rem;font-size:1rem"><i class="fas fa-check-circle"></i> Aprovadas</h3>';
+                approved.forEach(o => {
+                    const date = new Date(o.created_at).toLocaleDateString('pt-BR');
+                    html += `<div class="history-item"><div class="info"><i class="fas fa-check-circle"></i><div class="meta"><h4>${o.product_name}</h4><span>${date} - R$ ${o.price.toFixed(2).replace('.', ',')}</span></div></div><div class="actions"><a href="/download.html?order=${o.id}" target="_blank" style="color:var(--accent);font-size:.85rem"><i class="fas fa-download"></i> Baixar</a></div></div>`;
+                });
+            }
+            list.innerHTML = html;
+        } catch (e) {
+            console.log('Erro ao carregar pedidos:', e);
+            renderHistoryFallback();
+        }
+    }
+
+    function renderHistoryFallback() {
         const purchases = JSON.parse(localStorage.getItem('catyami_purchases') || '{}');
         const keys = Object.keys(purchases);
         const list = document.getElementById('historyList');
@@ -438,18 +689,9 @@ defrag C: /U /V</div>
             const date = new Date(p.date).toLocaleDateString('pt-BR');
             const item = document.createElement('div');
             item.className = 'history-item';
-            item.innerHTML = '<div class="info"><i class="fas fa-check-circle"></i><div class="meta"><h4>' + PRODUCT_NAMES[p.product] + '</h4><span>' + date + ' - R$ ' + p.price.toFixed(2).replace('.', ',') + '</span></div></div><div class="actions"><button onclick="downloadDirect(\'' + p.product + '\')"><i class="fas fa-download"></i> Baixar</button></div>';
+            item.innerHTML = '<div class="info"><i class="fas fa-check-circle"></i><div class="meta"><h4>' + PRODUCT_NAMES[p.product] + '</h4><span>' + date + ' - R$ ' + p.price.toFixed(2).replace('.', ',') + '</span></div></div>';
             list.appendChild(item);
         });
-    }
-
-    /* ==================== DOWNLOAD DIRETO (re-download) ==================== */
-    function downloadDirect(product) {
-        if (product === 'combo') {
-            ['pc', 'notebook', 'celular'].forEach(p => generateZip(p));
-        } else {
-            generateZip(product);
-        }
     }
 
     /* ==================== GERAR ZIP ==================== */

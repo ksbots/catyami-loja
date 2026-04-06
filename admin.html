@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catyami Admin - Painel de Vendas</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        :root{--bg:#0a0a0a;--card:#151515;--text:#a0a0a0;--white:#f0f0f0;--accent:#00ff88;--danger:#ff4757;--border:#2a2a2a;--yellow:#ffd700;--blue:#3498db}
+        body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
+        /* NAV */
+        nav{padding:1rem 5%;display:flex;justify-content:space-between;align-items:center;background:rgba(10,10,10,.95);border-bottom:1px solid var(--border)}
+        nav .logo{color:var(--white);font-size:1.3rem;font-weight:700}
+        nav .logo span{color:var(--accent)}
+        nav .status{display:flex;align-items:center;gap:.5rem;font-size:.85rem}
+        nav .dot{width:8px;height:8px;border-radius:50%;background:#555}
+        nav .dot.online{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+        /* MAIN */
+        .container{max-width:1200px;margin:0 auto;padding:2rem 1rem}
+        h1{color:var(--white);font-size:1.6rem;margin-bottom:.5rem}
+        .subtitle{opacity:.7;margin-bottom:2rem}
+        /* STATS */
+        .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:2rem}
+        .stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;text-align:center}
+        .stat i{font-size:1.5rem;margin-bottom:.5rem}
+        .stat .value{font-size:2rem;font-weight:800;color:var(--white)}
+        .stat .label{font-size:.85rem;opacity:.7}
+        .stat.revenue i{color:var(--accent)}
+        .stat.sales i{color:var(--blue)}
+        .stat.pending i{color:var(--yellow)}
+        .stat.rejected i{color:var(--danger)}
+        /* FILTERS */
+        .filters{display:flex;gap:.5rem;margin-bottom:1.5rem;flex-wrap:wrap}
+        .filters button{padding:.5rem 1rem;border:1px solid var(--border);background:transparent;color:var(--text);border-radius:8px;cursor:pointer;font-size:.85rem;transition:all .3s}
+        .filters button:hover,.filters button.active{border-color:var(--accent);color:var(--accent)}
+        /* TABLE */
+        .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+        table{width:100%;border-collapse:collapse}
+        thead{background:#0d0d0d}
+        th{padding:1rem;text-align:left;font-size:.8rem;text-transform:uppercase;opacity:.5;border-bottom:1px solid var(--border)}
+        td{padding:.75rem 1rem;border-bottom:1px solid var(--border);font-size:.9rem;vertical-align:middle}
+        tr:last-child td{border-bottom:none}
+        tr:hover{background:rgba(0,255,136,.02)}
+        .badge{display:inline-block;padding:3px 10px;border-radius:50px;font-size:.75rem;font-weight:700}
+        .badge.approved{background:rgba(0,255,136,.15);color:var(--accent)}
+        .badge.pending{background:rgba(255,215,0,.15);color:var(--yellow)}
+        .badge.confirmed{background:rgba(52,152,219,.15);color:var(--blue)}
+        .badge.rejected{background:rgba(255,71,87,.15);color:var(--danger)}
+        .action-btn{background:none;border:1px solid var(--border);color:var(--text);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.78rem;margin-right:4px;transition:all .3s}
+        .action-btn:hover{border-color:var(--accent);color:var(--accent)}
+        .action-btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+        .no-receipt{opacity:.3}
+        /* MODAL */
+        .modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:2000;align-items:center;justify-content:center}
+        .modal-overlay.active{display:flex}
+        .modal{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2rem;max-width:600px;width:95%;max-height:90vh;overflow-y:auto}
+        .modal h2{color:var(--white);margin-bottom:1rem}
+        .modal .close{float:right;background:none;border:none;color:var(--text);font-size:1.3rem;cursor:pointer}
+        .modal .close:hover{color:var(--white)}
+        .detail-row{display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border)}
+        .detail-row .label{opacity:.5}
+        .detail-row .value{color:var(--white);font-weight:600}
+        .receipt-img{max-width:100%;margin-top:1rem;border-radius:12px;border:1px solid var(--border)}
+        .empty{text-align:center;padding:3rem}
+        .empty i{font-size:3rem;opacity:.3;display:block;margin-bottom:1rem}
+        .refresh-btn{background:var(--accent);color:var(--bg);border:none;padding:.5rem 1.5rem;border-radius:8px;cursor:pointer;font-weight:700;font-size:.85rem;transition:opacity .3s}
+        .refresh-btn:hover{opacity:.85}
+        .header-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:1rem}
+        @media(max-width:768px){
+            .stats{grid-template-columns:1fr 1fr}
+            table{font-size:.78rem}
+            td,th{padding:.5rem}
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="logo">CATYAMI <span>ADMIN</span></div>
+        <div class="status">
+            <div class="dot" id="serverDot"></div>
+            <span id="serverStatus">Conectando...</span>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="header-row">
+            <div>
+                <h1>Painel de Vendas</h1>
+                <p class="subtitle">Todas as transacoes e pedidos</p>
+            </div>
+            <button class="refresh-btn" onclick="loadOrders()"><i class="fas fa-sync-alt"></i> Atualizar</button>
+        </div>
+
+        <!-- STATS -->
+        <div class="stats" id="statsBar">
+            <div class="stat revenue">
+                <i class="fas fa-dollar-sign"></i>
+                <div class="value" id="totalRevenue">R$ 0</div>
+                <div class="label">Receita Total (Aprovadas)</div>
+            </div>
+            <div class="stat sales">
+                <i class="fas fa-shopping-bag"></i>
+                <div class="value" id="totalSales">0</div>
+                <div class="label">Total de Pedidos</div>
+            </div>
+            <div class="stat pending">
+                <i class="fas fa-clock"></i>
+                <div class="value" id="totalPending">0</div>
+                <div class="label">Pendentes</div>
+            </div>
+            <div class="stat rejected">
+                <i class="fas fa-ban"></i>
+                <div class="value" id="totalApproved">0</div>
+                <div class="label">Aprovadas/Confirmadas</div>
+            </div>
+        </div>
+
+        <!-- FILTERS -->
+        <div class="filters">
+            <button class="active" onclick="filterOrders('all', this)">Todos</button>
+            <button onclick="filterOrders('approved', this)">Aprovados</button>
+            <button onclick="filterOrders('confirmed', this)">Confirmados</button>
+            <button onclick="filterOrders('pending', this)">Pendentes</button>
+            <button onclick="filterOrders('rejected', this)">Rejeitados</button>
+        </div>
+
+        <!-- TABLE -->
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Cliente</th>
+                        <th>Produto</th>
+                        <th>Valor</th>
+                        <th>Status</th>
+                        <th>Comprovante</th>
+                        <th>Data</th>
+                        <th>Acoes</th>
+                    </tr>
+                </thead>
+                <tbody id="ordersBody"></tbody>
+            </table>
+            <div class="empty" id="emptyMsg" hidden>
+                <i class="fas fa-inbox"></i>
+                <p>Nenhum pedido encontrado</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- DETAIL MODAL -->
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal">
+            <button class="close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+            <h2><i class="fas fa-receipt"></i> Detalhes do Pedido</h2>
+            <div id="detailContent"></div>
+        </div>
+    </div>
+
+    <script>
+    const API = '';
+    let allOrders = [];
+    let currentFilter = 'all';
+
+    window.addEventListener('load', () => {
+        checkServer();
+        loadOrders();
+        setInterval(loadOrders, 15000); // auto refresh 15s
+    });
+
+    async function checkServer() {
+        try {
+            const res = await fetch(`${API}/api/health`);
+            if (res.ok) {
+                document.getElementById('serverDot').classList.add('online');
+                document.getElementById('serverStatus').textContent = 'Online';
+            }
+        } catch(e) {
+            document.getElementById('serverStatus').textContent = 'Offline';
+        }
+    }
+
+    async function loadOrders() {
+        try {
+            const res = await fetch(`${API}/api/admin/orders`);
+            allOrders = await res.json();
+            applyFilter();
+            updateStats();
+            checkServer();
+        } catch(e) {
+            console.log('Erro ao carregar pedidos:', e);
+        }
+    }
+
+    function updateStats() {
+        const orders = allOrders;
+        const revenue = orders.filter(o => ['approved','confirmed'].includes(o.status)).reduce((s, o) => s + o.price, 0);
+        const pending = orders.filter(o => o.status === 'pending').length;
+        const approved = orders.filter(o => ['approved','confirmed'].includes(o.status)).length;
+
+        document.getElementById('totalRevenue').textContent = 'R$ ' + revenue.toFixed(2).replace('.', ',');
+        document.getElementById('totalSales').textContent = orders.length;
+        document.getElementById('totalPending').textContent = pending;
+        document.getElementById('totalApproved').textContent = approved;
+    }
+
+    function filterOrders(filter, btn) {
+        currentFilter = filter;
+        document.querySelectorAll('.filters button').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        applyFilter();
+    }
+
+    function applyFilter() {
+        const orders = currentFilter === 'all' ? allOrders : allOrders.filter(o => o.status === currentFilter);
+        const body = document.getElementById('ordersBody');
+        const empty = document.getElementById('emptyMsg');
+
+        if (orders.length === 0) {
+            body.innerHTML = '';
+            empty.hidden = false;
+            return;
+        }
+
+        empty.hidden = true;
+        body.innerHTML = orders.map(o => {
+            const date = new Date(o.created_at).toLocaleDateString('pt-BR') + ' ' +
+                         new Date(o.created_at).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+            const statusClass = ['approved','confirmed'].includes(o.status) ? (o.status === 'confirmed' ? 'confirmed' : 'approved') :
+                               o.status === 'rejected' ? 'rejected' : 'pending';
+            const statusLabel = o.status.charAt(0).toUpperCase() + o.status.slice(1);
+            const hasReceipt = o.receipt_path ?
+                `<button class="action-btn" onclick="viewOrder(${o.id})"><i class="fas fa-eye"></i> Ver</button>` :
+                `<span class="no-receipt">Sem</span>`;
+
+            return `<tr>
+                <td><strong>#${o.id}</strong></td>
+                <td>${o.customer_name || 'Anonimo'}${o.customer_email ? '<br><small style="opacity:.4">' + o.customer_email + '</small>' : ''}</td>
+                <td>${o.product_name}</td>
+                <td style="color:var(--white);font-weight:700">R$ ${o.price.toFixed(2).replace('.', ',')}</td>
+                <td><span class="badge ${statusClass}">${statusLabel}</span></td>
+                <td>${hasReceipt}</td>
+                <td>${date}</td>
+                <td><button class="action-btn" onclick="viewOrder(${o.id})"><i class="fas fa-search"></i></button></td>
+            </tr>`;
+        }).join('');
+    }
+
+    async function viewOrder(id) {
+        try {
+            const res = await fetch(`${API}/api/order/${id}`);
+            const order = await res.json();
+            const date = new Date(order.created_at).toLocaleString('pt-BR');
+
+            let html = `
+                <div class="detail-row"><span class="label">Pedido</span><span class="value">#${order.id}</span></div>
+                <div class="detail-row"><span class="label">Status</span><span class="value"><span class="badge ${order.status}">${order.status}</span></span></div>
+                <div class="detail-row"><span class="label">Produto</span><span class="value">${order.product_name}</span></div>
+                <div class="detail-row"><span class="label">Valor</span><span class="value">R$ ${order.price.toFixed(2).replace('.', ',')}</span></div>
+                <div class="detail-row"><span class="label">Cliente</span><span class="value">${order.customer_name || 'Anonimo'}</span></div>
+                <div class="detail-row"><span class="label">Email</span><span class="value">${order.customer_email || 'Nao informado'}</span></div>
+                <div class="detail-row"><span class="label">MP Payment ID</span><span class="value" style="font-family:monospace;font-size:.8rem">${order.mp_payment_id || 'N/A'}</span></div>
+                <div class="detail-row"><span class="label">Data</span><span class="value">${date}</span></div>
+            `;
+
+            if (order.receipt_path) {
+                html += `
+                    <div style="margin-top:1.5rem;text-align:center">
+                        <h3 style="color:var(--white);margin-bottom:.5rem"><i class="fas fa-image"></i> Comprovante</h3>
+                        <img src="/api/receipt/${order.receipt_path}" class="receipt-img" alt="Comprovante">
+                    </div>
+                `;
+            }
+
+            // Action buttons based on status
+            html += `<div style="margin-top:1.5rem;display:flex;gap:.5rem;justify-content:center">`;
+            if (order.status === 'pending') {
+                html += `<button class="refresh-btn" style="background:var(--accent)" onclick="approveOrder(${order.id})"><i class="fas fa-check"></i> Aprovar Manualmente</button>`;
+                html += `<button class="refresh-btn" style="background:var(--danger)" onclick="rejectOrder(${order.id})"><i class="fas fa-ban"></i> Rejeitar</button>`;
+            }
+            if (['approved','pending'].includes(order.status)) {
+                html += `<button class="refresh-btn" style="background:var(--blue)" onclick="sendDownloadLink(${order.id})"><i class="fas fa-download"></i> Link Download</button>`;
+            }
+            html += `</div>`;
+
+            document.getElementById('detailContent').innerHTML = html;
+            document.getElementById('detailModal').classList.add('active');
+        } catch(e) {
+            console.log('Erro:', e);
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('detailModal').classList.remove('active');
+    }
+
+    async function approveOrder(id) {
+        try {
+            const res = await fetch(`${API}/api/admin/order/${id}/approve`, { method: 'POST' });
+            if (res.ok) {
+                alert('Pedido aprovado!');
+                closeModal();
+                loadOrders();
+            }
+        } catch(e) { alert('Erro ao aprovar'); }
+    }
+
+    async function rejectOrder(id) {
+        if (!confirm('Rejeitar este pedido?')) return;
+        try {
+            const res = await fetch(`${API}/api/admin/order/${id}/reject`, { method: 'POST' });
+            if (res.ok) {
+                alert('Pedido rejeitado');
+                closeModal();
+                loadOrders();
+            }
+        } catch(e) { alert('Erro ao rejeitar'); }
+    }
+
+    function sendDownloadLink(id) {
+        const url = `${API}/api/admin/orders`;
+        const text = `Seu download: ${window.location.origin}/download.html?order=${id}\nCaso nao tenha recebido, entre em contato com suporte.`;
+        navigator.clipboard.writeText(text).then(() => {
+            alert(`Link de download copiado para a area de transferencia!\n\nCole em uma mensagem para o cliente.`);
+        });
+    }
+    </script>
+</body>
+</html>
