@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catyami Otimização - Loja</title>
+    <!-- bibliotecas CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+    /* ==================== RESET E VARIÁVEIS ==================== */
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{--bg:#0a0a0a;--card:#151515;--text:#a0a0a0;--white:#f0f0f0;--accent:#00ff88;--danger:#ff4757;--border:#2a2a2a}
+    body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
+    a{color:var(--accent);text-decoration:none}
+    /* ==================== NAV ==================== */
+    nav{position:fixed;top:0;width:100%;padding:1rem 5%;display:flex;justify-content:space-between;align-items:center;background:rgba(10,10,10,.95);backdrop-filter:blur(10px);z-index:1000;border-bottom:1px solid var(--border)}
+    nav .logo{color:var(--white);font-size:1.4rem;font-weight:700;letter-spacing:1px}
+    nav .logo span{color:var(--accent)}
+    nav ul{list-style:none;display:flex;gap:1.5rem}
+    nav ul li a{color:var(--text);font-weight:500;transition:color .3s}
+    nav ul li a:hover{color:var(--white)}
+    /* ==================== HERO ==================== */
+    .hero{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:2rem 5%;position:relative;overflow:hidden}
+    .hero::before{content:'';position:absolute;width:600px;height:600px;background:radial-gradient(circle,rgba(0,255,136,.06) 0%,transparent 70%);border-radius:50%;top:-200px;right:-200px;animation:float 8s ease-in-out infinite}
+    .hero::after{content:'';position:absolute;width:400px;height:400px;background:radial-gradient(circle,rgba(0,255,136,.04) 0%,transparent 70%);border-radius:50%;bottom:-100px;left:-100px;animation:float 6s ease-in-out infinite reverse}
+    @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-30px)}}
+    .hero-content{position:relative;z-index:1;max-width:800px}
+    .hero h1{font-size:3rem;color:var(--white);margin-bottom:1rem;font-weight:800}
+    .hero h1 span{color:var(--accent)}
+    .hero p{font-size:1.2rem;margin-bottom:2rem;opacity:.8}
+    .btn{display:inline-block;padding:.9rem 2.5rem;border-radius:50px;text-decoration:none;font-weight:600;font-size:1rem;transition:transform .3s,box-shadow .3s;cursor:pointer;border:none}
+    .btn{background:var(--white);color:var(--bg)}
+    .btn:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(255,255,255,.15)}
+    .btn-sm{padding:.6rem 1.5rem;font-size:.9rem}
+    /* ==================== SEÇÕES ==================== */
+    section{padding:5rem 5%}
+    .section-title{text-align:center;font-size:2rem;color:var(--white);margin-bottom:.5rem}
+    .section-sub{text-align:center;color:var(--text);margin-bottom:3rem;font-size:1.05rem}
+    /* ==================== PRODUTOS ==================== */
+    #produtos{background:#0d0d0d}
+    .products-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:2rem;max-width:1200px;margin:0 auto}
+    .product-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2rem;text-align:center;transition:transform .3s,box-shadow .3s;position:relative;overflow:hidden}
+    .product-card:hover{transform:translateY(-6px);box-shadow:0 12px 40px rgba(0,255,136,.08)}
+    .product-card.purchased{border-color:var(--accent)}
+    .product-card.purchased::after{content:'COMPRADO';position:absolute;top:12px;right:-28px;background:var(--accent);color:var(--bg);padding:4px 30px;font-size:.7rem;font-weight:700;transform:rotate(45deg)}
+    .product-icon{width:80px;height:80px;margin:0 auto 1rem;background:linear-gradient(135deg,#1a1a1a,#2a2a2a);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;color:var(--accent)}
+    .product-card h3{color:var(--white);margin-bottom:.5rem;font-size:1.3rem}
+    .product-card .desc{font-size:.9rem;margin-bottom:1rem}
+    .product-card .price{color:var(--white);font-size:2rem;font-weight:800;margin-bottom:1.5rem}
+    .product-card .price small{font-size:.9rem;font-weight:400;color:var(--text)}
+    /* ==================== MODAL ==================== */
+    .modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);z-index:2000;align-items:center;justify-content:center}
+    .modal-overlay.active{display:flex}
+    .modal{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2rem;max-width:500px;width:90%;max-height:90vh;overflow-y:auto;position:relative;animation:modalIn .3s ease}
+    @keyframes modalIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+    .modal h2{color:var(--white);margin-bottom:1rem;font-size:1.4rem}
+    .modal .close{position:absolute;top:1rem;right:1rem;color:var(--text);background:none;border:none;font-size:1.3rem;cursor:pointer;transition:color .3s}
+    .modal .close:hover{color:var(--white)}
+    .modal .steps{margin:1rem 0}
+    .modal .step{padding:.7rem;margin-bottom:.5rem;border-radius:8px;background:#0d0d0d}
+    .modal .step .num{color:var(--accent);font-weight:700;margin-right:.5rem}
+    .modal .qr-area{text-align:center;margin:1.5rem 0;padding:1rem;background:#0d0d0d;border-radius:12px}
+    .modal .qr-area canvas,.modal .qr-area img{margin:0 auto}
+    .modal .pix-key{display:flex;align-items:center;gap:.5rem;margin:1rem 0;padding:.7rem;background:#0d0d0d;border-radius:8px}
+    .modal .pix-key input{flex:1;background:transparent;border:none;color:var(--white);font-size:.9rem;font-family:monospace;outline:none}
+    .modal .pix-key button{background:var(--accent);color:var(--bg);border:none;padding:.5rem 1rem;border-radius:8px;cursor:pointer;font-weight:700;font-size:.8rem}
+    .upload-area{border:2px dashed var(--border);border-radius:12px;padding:2rem;text-align:center;cursor:pointer;transition:border-color .3s}
+    .upload-area:hover{border-color:var(--accent)}
+    .upload-area i{font-size:2rem;color:var(--text);margin-bottom:.5rem}
+    .upload-area p{margin-top:.5rem;font-size:.85rem}
+    .upload-area input[type="file"]{display:none}
+    .upload-area .preview{margin-top:1rem}
+    .upload-area .preview img{max-width:200px;border-radius:8px}
+    .modal .confirm-btn{width:100%;padding:1rem;background:var(--accent);color:var(--bg);border:none;border-radius:50px;font-weight:700;font-size:1.05rem;cursor:pointer;transition:background .3s,transform .3s;margin-top:1rem}
+    .modal .confirm-btn:disabled{opacity:.4;cursor:not-allowed}
+    .modal .confirm-btn:not(:disabled):hover{transform:translateY(-2px);background:#00dd77}
+    .success-msg{text-align:center;padding:2rem}
+    .success-msg i{color:var(--accent);font-size:3rem;margin-bottom:1rem}
+    .success-msg h3{color:var(--white);margin-bottom:.5rem}
+    .download-btns{display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap;justify-content:center}
+    .download-btns .btn{border-radius:10px;padding:.7rem 1.5rem;font-size:.9rem}
+    .download-btns .btn i{margin-right:.3rem}
+    /* ==================== HISTÓRICO ==================== */
+    #historico{background:#0d0d0d}
+    .history-list{max-width:700px;margin:0 auto}
+    .history-item{display:flex;justify-content:space-between;align-items:center;padding:1rem;background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:.75rem}
+    .history-item .info{display:flex;align-items:center;gap:1rem}
+    .history-item .info i{color:var(--accent);font-size:1.2rem}
+    .history-item .info .meta h4{color:var(--white);font-size:1rem}
+    .history-item .info .meta span{font-size:.8rem}
+    .history-item .actions{display:flex;gap:.5rem}
+    .history-item .actions button{padding:.5rem 1rem;border:1px solid var(--border);background:transparent;color:var(--text);border-radius:8px;cursor:pointer;font-size:.8rem;transition:all .3s}
+    .history-item .actions button:hover{border-color:var(--accent);color:var(--accent)}
+    .empty-state{text-align:center;padding:3rem;color:var(--text)}
+    .empty-state i{font-size:3rem;margin-bottom:1rem;opacity:.3}
+    /* ==================== DEV MODE ==================== */
+    #dev{background:var(--bg)}
+    .dev-toggle{text-align:center;margin-bottom:2rem}
+    .dev-toggle button{background:transparent;border:1px solid var(--border);color:var(--text);padding:.5rem 1.5rem;border-radius:50px;cursor:pointer;transition:all .3s;font-size:.9rem}
+    .dev-toggle button:hover{border-color:var(--accent);color:var(--accent)}
+    .dev-panel{display:none;max-width:900px;margin:0 auto}
+    .dev-panel.active{display:block}
+    .dev-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1rem}
+    .dev-card h4{color:var(--white);margin-bottom:.75rem}
+    .dev-card .cmd{background:#0d0d0d;padding:.75rem;border-radius:8px;font-family:'Consolas',monospace;font-size:.85rem;color:#7fe0a8;overflow-x:auto;white-space:pre-wrap;word-break:break-all}
+    /* ==================== FOOTER ==================== */
+    footer{text-align:center;padding:2rem;color:rgba(255,255,255,.3);font-size:.85rem;border-top:1px solid var(--border)}
+    /* ==================== RESPONSIVO ==================== */
+    @media(max-width:768px){
+        .hero h1{font-size:2rem}
+        nav ul{gap:.8rem}
+        .products-grid{grid-template-columns:1fr}
+        .modal{padding:1.5rem}
+    }
+    /* ==================== ANIMACOES ==================== */
+    .fade-in{opacity:0;transform:translateY(20px);transition:opacity .6s ease,transform .6s ease}
+    .fade-in.visible{opacity:1;transform:translateY(0)}
+    </style>
+</head>
+<body>
+    <!-- ==================== NAV ==================== -->
+    <nav>
+        <div class="logo">CATYAMI <span>OTIMIZAÇÃO</span></div>
+        <ul>
+            <li><a href="#produtos">Produtos</a></li>
+            <li><a href="#historico">Histórico</a></li>
+            <li><a href="#dev">Dev</a></li>
+        </ul>
+    </nav>
+
+    <!-- ==================== HERO ==================== -->
+    <section class="hero" id="inicio">
+        <div class="hero-content">
+            <h1>Maximize a <span>performance</span> do seu dispositivo</h1>
+            <p>Pacotes de otimização profissionais com scripts reais para PC, Notebook e Celular. Download instantâneo após o pagamento via Pix.</p>
+            <a href="#produtos" class="btn">Ver Produtos</a>
+        </div>
+    </section>
+
+    <!-- ==================== PRODUTOS ==================== -->
+    <section id="produtos">
+        <h2 class="section-title">Nossos Produtos</h2>
+        <p class="section-sub">Escolha o pacote ideal e receba o download imediatamente</p>
+        <div class="products-grid">
+            <!-- PC -->
+            <div class="product-card fade-in" id="card-pc">
+                <div class="product-icon"><i class="fas fa-desktop"></i></div>
+                <h3>PC Desktop</h3>
+                <p class="desc">Limpeza, ajuste de RAM, serviços, jogos, monitor e muito mais.</p>
+                <div class="price">R$ 19,90</div>
+                <button class="btn btn-sm" onclick="openCheckout('pc')"><i class="fas fa-shopping-cart"></i> Comprar</button>
+                <button class="btn btn-sm" style="background:transparent;color:var(--white);border:1px solid var(--border);margin-top:.5rem;font-size:.8rem;padding:.4rem 1rem;border-radius:50px;cursor:pointer" onclick="downloadDirect('pc')" id="redownload-pc" data-id="pc" hidden>
+                    <i class="fas fa-download"></i> Re-download
+                </button>
+            </div>
+            <!-- Notebook -->
+            <div class="product-card fade-in" id="card-notebook">
+                <div class="product-icon"><i class="fas fa-laptop"></i></div>
+                <h3>Notebook</h3>
+                <p class="desc">Scripts para notebooks fracos/medianos, modo viagem, economia de energia.</p>
+                <div class="price">R$ 19,90</div>
+                <button class="btn btn-sm" onclick="openCheckout('notebook')"><i class="fas fa-shopping-cart"></i> Comprar</button>
+                <button class="btn btn-sm" style="background:transparent;color:var(--white);border:1px solid var(--border);margin-top:.5rem;font-size:.8rem;padding:.4rem 1rem;border-radius:50px;cursor:pointer" onclick="downloadDirect('notebook')" id="redownload-notebook" data-id="notebook" hidden>
+                    <i class="fas fa-download"></i> Re-download
+                </button>
+            </div>
+            <!-- Celular -->
+            <div class="product-card fade-in" id="card-celular">
+                <div class="product-icon"><i class="fas fa-mobile-alt"></i></div>
+                <h3>Celular (Android)</h3>
+                <p class="desc">Guia completo com otimizações para dispositivos Android.</p>
+                <div class="price">R$ 19,90</div>
+                <button class="btn btn-sm" onclick="openCheckout('celular')"><i class="fas fa-shopping-cart"></i> Comprar</button>
+                <button class="btn btn-sm" style="background:transparent;color:var(--white);border:1px solid var(--border);margin-top:.5rem;font-size:.8rem;padding:.4rem 1rem;border-radius:50px;cursor:pointer" onclick="downloadDirect('celular')" id="redownload-celular" data-id="celular" hidden>
+                    <i class="fas fa-download"></i> Re-download
+                </button>
+            </div>
+            <!-- Combo -->
+            <div class="product-card fade-in" id="card-combo">
+                <div class="product-icon"><i class="fas fa-box-open"></i></div>
+                <h3>Pacote Completo</h3>
+                <p class="desc">Todos os três pacotes com desconto especial.</p>
+                <div class="price">R$ 49,90 <small>(economia de R$ 9,80)</small></div>
+                <button class="btn btn-sm" onclick="openCheckout('combo')"><i class="fas fa-shopping-cart"></i> Comprar</button>
+                <button class="btn btn-sm" style="background:transparent;color:var(--white);border:1px solid var(--border);margin-top:.5rem;font-size:.8rem;padding:.4rem 1rem;border-radius:50px;cursor:pointer" onclick="downloadDirect('combo')" id="redownload-combo" data-id="combo" hidden>
+                    <i class="fas fa-download"></i> Re-download
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== HISTORICO ==================== -->
+    <section id="historico">
+        <h2 class="section-title">Histórico de Compras</h2>
+        <p class="section-sub">Seus downloads e compras anteriores</p>
+        <div class="history-list" id="historyList">
+            <div class="empty-state" id="emptyHistory">
+                <i class="fas fa-shopping-bag"></i>
+                <p>Nenhuma compra registrada ainda.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== DEV MODE ==================== -->
+    <section id="dev">
+        <h2 class="section-title">Modo Desenvolvedor</h2>
+        <p class="section-sub">Comandos manuais e scripts para quem prefere executar manualmente</p>
+        <div class="dev-toggle" id="devBlocked">
+            <p style="opacity:.5"><i class="fas fa-lock"></i> Area exclusiva para clientes. Realize uma compra para acessar.</p>
+        </div>
+        <div class="dev-toggle" id="devUnlocked" hidden>
+            <button onclick="toggleDev()"><i class="fas fa-terminal"></i> Mostrar Comandos</button>
+        </div>
+        <div class="dev-panel" id="devPanel">
+            <div class="dev-card">
+                <h4><i class="fas fa-broom"></i> Limpeza de Arquivos Temporários (CMD)</h4>
+                <div class="cmd">REM Limpa temporarios do Windows
+del /q /f /s %TEMP%\*
+del /q /f /s C:\Windows\Prefetch\*
+del /q /f /s C:\Windows\Temp\*</div>
+            </div>
+            <div class="dev-card">
+                <h4><i class="fas fa-memory"></i> Limpar RAM (PowerShell)</h4>
+                <div class="cmd"># Limpar lista de trabalho da memoria
+[System.GC]::Collect()
+[GC]::WaitForPendingFinalizers()
+EmptyTrimmed = 2</div>
+            </div>
+            <div class="dev-card">
+                <h4><i class="fas fa-network-wired"></i> Otimizar Rede (CMD)</h4>
+                <div class="cmd">REM Flush DNS e otimizacao TCP/IP
+ipconfig /flushdns
+netsh int ip reset
+netsh winsock reset
+netsh interface tcp set global autotuning=normal
+netsh interface tcp set global rss=enabled</div>
+            </div>
+            <div class="dev-card">
+                <h4><i class="fas fa-gamepad"></i> Jogos - Desabilitar Game Bar/ DVR (Registry)</h4>
+                <div class="cmd">reg add "HKCU\System\GameConfigStore" /v GameDVR_Enabled /t REG_DWORD /d 0 /f
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR" /v AppCaptureEnabled /t REG_DWORD /d 0 /f</div>
+            </div>
+            <div class="dev-card">
+                <h4><i class="fas fa-bolt"></i> Plano de Energia Ultra Performance</h4>
+                <div class="cmd">powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61
+powercfg -setactive e9a42b02-d5df-448d-aa00-03f14749eb61</div>
+            </div>
+            <div class="dev-card">
+                <h4><i class="fas fa-hdd"></i> Manutencao de Disco (CMD Admin)</h4>
+                <div class="cmd">REM Verificar e reparar disco
+chkdsk /f /r C:
+REM Limpeza automatica
+cleanmgr /d C:
+REM Desfragmentar (HDD apenas)
+defrag C: /U /V</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== MODAL CHECKOUT ==================== -->
+    <div class="modal-overlay" id="checkoutModal">
+        <div class="modal">
+            <button class="close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+            <h2 id="modalTitle">Finalizar Compra</h2>
+
+            <!-- Etapa 1: Pix -->
+            <div id="stepPix">
+                <div class="steps">
+                    <div class="step"><span class="num">1.</span> Escaneie o QR Code ou copie a chave Pix</div>
+                    <div class="step"><span class="num">2.</span> Realize o pagamento no seu banco</div>
+                    <div class="step"><span class="num">3.</span> Envie o comprovante abaixo</div>
+                </div>
+                <div class="qr-area">
+                    <div id="qrCode"></div>
+                </div>
+                <div class="pix-key">
+                    <input type="text" id="pixKeyInput" value="43427ffd-4432-47f0-b41a-c85272a1f3ca" readonly>
+                    <button onclick="copyPixKey()">Copiar</button>
+                </div>
+                <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Clique para enviar o comprovante</p>
+                    <input type="file" id="fileInput" accept="image/*" onchange="previewFile(this)">
+                    <div class="preview" id="preview"></div>
+                </div>
+                <button class="confirm-btn" id="confirmBtn" disabled onclick="confirmPayment()">Confirmar Pagamento</button>
+            </div>
+
+            <!-- Etapa 2: Sucesso -->
+            <div id="stepSuccess" style="display:none">
+                <div class="success-msg">
+                    <i class="fas fa-check-circle"></i>
+                    <h3>Pagamento Confirmado!</h3>
+                    <p>Seu pacote de otimização está pronto para download.</p>
+                    <div class="download-btns" id="downloadBtns"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== FOOTER ==================== -->
+    <footer>
+        <p>&copy; 2026 Catyami Otimizacao. Todos os direitos reservados.</p>
+    </footer>
+
+    <!-- ==================== JAVASCRIPT ==================== -->
+    <script>
+    /* ==================== DADOS ==================== */
+    const PIX_KEY = '43427ffd-4432-47f0-b41a-c85272a1f3ca';
+    const PRODUCT_NAMES = {
+        pc: 'PC Desktop',
+        notebook: 'Notebook',
+        celular: 'Celular (Android)',
+        combo: 'Pacote Completo'
+    };
+    const PRICES = { pc: 19.90, notebook: 19.90, celular: 19.90, combo: 49.90 };
+
+    /* ==================== STATE ==================== */
+    let currentProduct = null;
+    let fileUploaded = false;
+
+    /* ==================== INIT ==================== */
+    window.addEventListener('load', () => {
+        // scroll animations
+        const obs = new IntersectionObserver(e => { e.forEach(el => { if(el.isIntersecting) el.target.classList.add('visible'); }); }, {threshold: 0.1});
+        document.querySelectorAll('.fade-in').forEach(el => obs.observe(el));
+        // check purchased
+        loadPurchaseState();
+    });
+
+    /* ==================== MODAL ==================== */
+    function openCheckout(product) {
+        currentProduct = product;
+        document.getElementById('checkoutModal').classList.add('active');
+        document.getElementById('modalTitle').textContent = 'Comprar - ' + PRODUCT_NAMES[product];
+        document.getElementById('stepPix').style.display = 'block';
+        document.getElementById('stepSuccess').style.display = 'none';
+        document.getElementById('preview').innerHTML = '';
+        document.getElementById('uploadArea').style.display = 'block';
+        document.getElementById('confirmBtn').disabled = true;
+        fileUploaded = false;
+        // generate QR Code
+        document.getElementById('qrCode').innerHTML = '';
+        new QRCode(document.getElementById('qrCode'), { text: PIX_KEY, width: 200, height: 200, colorDark: '#00ff88', colorLight: '#151515' });
+    }
+    function closeModal() { document.getElementById('checkoutModal').classList.remove('active'); }
+
+    /* ==================== PIX ==================== */
+    function copyPixKey() {
+        navigator.clipboard.writeText(PIX_KEY).then(() => {
+            const btn = document.querySelector('.pix-key button');
+            btn.textContent = 'Copiado!';
+            setTimeout(() => btn.textContent = 'Copiar', 2000);
+        });
+    }
+
+    /* ==================== UPLOAD ==================== */
+    function previewFile(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('preview').innerHTML = '<img src="' + e.target.result + '">';
+            };
+            reader.readAsDataURL(input.files[0]);
+            document.getElementById('confirmBtn').disabled = false;
+            fileUploaded = true;
+        }
+    }
+
+    /* ==================== CONFIRMAR ==================== */
+    function confirmPayment() {
+        if (!fileUploaded) return;
+        // save purchase
+        savePurchase(currentProduct);
+        // show success
+        document.getElementById('stepPix').style.display = 'none';
+        document.getElementById('stepSuccess').style.display = 'block';
+        // build download buttons
+        const container = document.getElementById('downloadBtns');
+        container.innerHTML = '';
+        const products = currentProduct === 'combo' ? ['pc', 'notebook', 'celular'] : [currentProduct];
+        products.forEach(p => {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-sm';
+            btn.innerHTML = '<i class="fas fa-download"></i> ' + PRODUCT_NAMES[p];
+            btn.onclick = () => generateZip(p);
+            container.appendChild(btn);
+        });
+    }
+
+    /* ==================== LOCAL STORAGE ==================== */
+    function savePurchase(product) {
+        let purchases = JSON.parse(localStorage.getItem('catyami_purchases') || '{}');
+        purchases[product] = { date: new Date().toISOString(), product: product, price: PRICES[product] };
+        localStorage.setItem('catyami_purchases', JSON.stringify(purchases));
+        loadPurchaseState();
+        renderHistory();
+    }
+
+    function loadPurchaseState() {
+        const purchases = JSON.parse(localStorage.getItem('catyami_purchases') || '{}');
+        ['pc', 'notebook', 'celular'].forEach(id => {
+            const card = document.getElementById('card-' + id);
+            const btn = document.getElementById('redownload-' + id);
+            if (purchases[id] || purchases['combo']) {
+                card.classList.add('purchased');
+                btn.hidden = false;
+            }
+        });
+        if (purchases['combo']) {
+            document.getElementById('card-combo').classList.add('purchased');
+            document.getElementById('redownload-combo').hidden = false;
+        }
+        // Desbloquear secao Dev para clientes
+        const hasPurchase = Object.keys(purchases).length > 0;
+        document.getElementById('devBlocked').hidden = hasPurchase;
+        document.getElementById('devUnlocked').hidden = !hasPurchase;
+        renderHistory();
+    }
+
+    function renderHistory() {
+        const purchases = JSON.parse(localStorage.getItem('catyami_purchases') || '{}');
+        const keys = Object.keys(purchases);
+        const list = document.getElementById('historyList');
+        const empty = document.getElementById('emptyHistory');
+        if (keys.length === 0) {
+            list.innerHTML = '';
+            list.appendChild(empty);
+            empty.style.display = 'block';
+            return;
+        }
+        list.innerHTML = '';
+        keys.forEach(k => {
+            const p = purchases[k];
+            const date = new Date(p.date).toLocaleDateString('pt-BR');
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.innerHTML = '<div class="info"><i class="fas fa-check-circle"></i><div class="meta"><h4>' + PRODUCT_NAMES[p.product] + '</h4><span>' + date + ' - R$ ' + p.price.toFixed(2).replace('.', ',') + '</span></div></div><div class="actions"><button onclick="downloadDirect(\'' + p.product + '\')"><i class="fas fa-download"></i> Baixar</button></div>';
+            list.appendChild(item);
+        });
+    }
+
+    /* ==================== DOWNLOAD DIRETO (re-download) ==================== */
+    function downloadDirect(product) {
+        if (product === 'combo') {
+            ['pc', 'notebook', 'celular'].forEach(p => generateZip(p));
+        } else {
+            generateZip(product);
+        }
+    }
+
+    /* ==================== GERAR ZIP ==================== */
+    async function generateZip(type) {
+        const zip = new JSZip();
+        const folder = zip.folder('Catyami_Otimizacao_' + type);
+
+        if (type === 'pc') {
+            // ===== LEVE =====
+            const leveFolder = folder.folder('leve');
+            leveFolder.file('01_limpeza_temporarios.bat', BAT_LIMPEZA);
+            leveFolder.file('02_ajuste_ram.bat', BAT_RAM);
+            leveFolder.file('03_desativar_servicos.bat', BAT_SERVICOS);
+            leveFolder.file('04_otimizar_interface.reg', REG_INTERFACE);
+            leveFolder.file('05_gerenciar_inicializacao.bat', BAT_INICIALIZACAO);
+            leveFolder.file('06_otimizar_jogos.bat', BAT_JOGOS);
+            leveFolder.file('07_manutencao_disco.bat', BAT_MANUTENCAO);
+            // ===== AVANCADA =====
+            const avancFolder = folder.folder('avancada');
+            avancFolder.file('01_tweaks_completos.bat', BAT_COMPLETO);
+            avancFolder.file('02_monitor_hz.bat', BAT_MONITOR);
+            avancFolder.file('03_painel_monitor.ps1', PS1_PAINEL);
+        } else if (type === 'notebook') {
+            folder.file('01_limpeza_basica.bat', BAT_LIMPEZA);
+            folder.file('02_energia_notebook.bat', BAT_NOTEBOOK_ENERGIA);
+            folder.file('03_desativar_animacoes.reg', REG_SEM_ANIMACOES);
+            folder.file('04_plano_bateria.bat', BAT_BATERIA);
+            folder.file('05_desativar_servicos.bat', BAT_SERVICOS_NOTEBOOK);
+            folder.file('06_otimizar_wifi.bat', BAT_WIFI);
+            folder.file('07_limpar_background.bat', BAT_BACKGROUND);
+            folder.file('08_modo_viagem.bat', BAT_MODO_VIAGEM);
+            // guia
+            folder.file('LEIA_PRIMEIRO.txt', TXT_NOTES_LEIA);
+        } else if (type === 'celular') {
+            folder.file('01_guia_otimizacao.html', HTML_GUIA_CELULAR);
+            folder.file('LEIA_PRIMEIRO.txt', TXT_CELULAR_LEIA);
+        }
+
+        const blob = await zip.generateAsync({ type: 'blob' });
+        saveAs(blob, 'Catyami_Otimizacao_' + type + '.zip');
+        // mark purchased
+        savePurchase(type);
+    }
+
+    /* ==================== DEV TOGGLE ==================== */
+    function toggleDev() {
+        document.getElementById('devPanel').classList.toggle('active');
+    }
+
+    /* ==================== SMOOTH SCROLL ==================== */
+    document.querySelectorAll('nav a[href^="#"]').forEach(a => {
+        a.addEventListener('click', e => {
+            e.preventDefault();
+            document.querySelector(a.getAttribute('href')).scrollIntoView({ behavior: 'smooth' });
+        });
+    });
+
+    /* ==================== SCRIPTS EMBUTIDOS (conteudo dos ZIPs) ==================== */
+
+    // BAT: Limpesa temporarios
+    const BAT_LIMPEZA = `@echo off
+chcp 65001 >nul
+echo ============================================
+echo   Catyami Otimizacao - Limpeza Temporarios
+echo ============================================
+echo.
+
+REM Pede elevacao
+NET SESSION >nul 2>&1
+IF %ERRORLEVEL% NEQ 0 (
+    echo Administrador necessario, solicitando...
+    powershell -Command "Start-Process cmd -Verb RunAs -ArgumentList '/c %~f0'"
+    exit /b
+)
+
+echo [1/4] Limpando %%TEMP%% ...
+del /q /f /s %TEMP%\\* >nul 2>&1
+
+echo [2/4] Limpando Prefetch ...
+del /q /f /s C:\\Windows\\Prefetch\\* >nul 2>&1
+
+echo [3/4] Limpando Windows Temp ...
+del /q /f /s C:\\Windows\\Temp\\* >nul 2>&1
+
+echo [4/4] Limpando lixeira ...
+PowerShell -NoProfile -Command "Clear-RecycleBin -Force" >nul 2>&1
+
+echo.
+echo Limpeza concluida! Reinicie para melhores resultados.
+pause`;
+
+    // BAT: Ajuste RAM
+    const BAT_RAM = `@echo off
+chcp 65001 >nul
+echo ============================================
+echo   Catyami Otimizacao - Ajuste de RAM
+echo ============================================
+echo.
+
+NET SESSION >nul 2>&1
+IF %ERRORLEVEL% NEQ 0 (
+    powershell -Command "Start-Process cmd -Verb RunAs -ArgumentList '/c %~f0'"
+    exit /b
+)
+
+echo Configurando pagina de memoria...
+wmic pagefileset /set AutomaticManaged=TRUE
+echo.
+
+echo Limpando memoria stand-by...
+PowerShell -Command "& {[System.GC]::Collect()}"
+
+echo Configurando Superfetch...
+sc config SysMain start=auto >nul 2>&1
+echo SysMain (Superfetch) habilitado.
+
+echo.
+echo Ajuste de RAM concluido!
+pause`;
+
+    // BAT: Desativar servicos desnecessarios
+    const BAT_SERVICOS = `@echo off
+chcp 65001 >nul
+echo ============================================
+echo   Catyami Otimizacao - Desativar Servicos
+echo ============================================
+echo.
+
+NET SESSION >nul 2>&1
+IF %ERRORLEVEL% NEQ 0 (
+    powershell -Command "Start-Process cmd -Verb RunAs -ArgumentList '/c %~f0'"
+    exit /b
+)
+
+REM Servicos seguros para desativar
+sc config DiagTrack start=disabled >nul 2>&1
+echo DiagTrack desativado (telemetria)
+
+sc config dmwappushservice start=disabled >nul 2>&1
+echo dmwappushservice desativado (telemetria)
+
+sc config XboxGipSvc start=disabled >nul 2>&1
+echo XboxGipSvc desativado
+
+echo.
+echo Servicos desativados com seguranca.
+echo Observacao: Voce pode reverter com 'sc config NOME start=auto'
+pause`;
+
+    // REG: Otimizar interface
+    const REG_INTERFACE = `Windows Registry Editor Version 5.00
+
+; Catyami Otimizacao - Ajustes de Interface
+
+; Acelerar menus
+[HKEY_CURRENT_USER\\Control Panel\\Desktop]
+"MenuShowDelay"="50"
+
+; Remover "Atalho" do nome de arquivos
+[HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer]
+"link"=hex:00,00,00,00
+
+; Desabilitar animacoes de janela
+[HKEY_CURRENT_USER\\Control Panel\\Desktop\\WindowMetrics]
+"MinAnimate"="0"`;
+
+    // BAT: Gerenciar inicializacao
+    const BAT_INICIALIZACAO = `@echo off
+chcp 65001 >nul
+echo ============================================
+echo   Catyami Otimizacao - Gerenciar Inicializacao
+echo ============================================
+echo.
+echo Programas na inicializacao atual:
+echo.
+wmic startup get Caption,Command,Location
+echo.
+echo Removendo itens desnecessarios...
+
+REM Limpa entradas comuns
+for /f "skip=2 tokens=3,* delims= " %%a in ('reg query "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"') do (
+    echo Removendo: %%a %%b
+    reg delete "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run" /v %%a /f >nul 2>&1
+)
+
+echo.
+echo Inicializacao otimizada. Revise manualmente programas essenciais.
+pause`;
+
+    // BAT: Otimizar para jogos
+    const BAT_JOGOS = `@echo off
+chcp 65001 >nul
+echo ============================================
+echo   Catyami Otimizacao - Modo Jogos
+echo ============================================
+echo.
+
+NET SESSION >nul 2>&1
+IF %ERRORLEVEL% NEQ 0 (
+    powershell -Command "Start-Process cmd -Verb RunAs -ArgumentList '/c %~f0'"
+    exit /b
+)
+
+echo Desativando Game Bar e DVR...
+reg add "HKCU\\System\\GameConfigStore" /v GameDVR_Enabled /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\GameDVR" /v AppCaptureEnabled /t REG_DWORD /d 0 /f >nul 2>&1
+echo Game Bar e DVR desativados.
+
+echo Ativando plano Ultra Performance...
+powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 >nul 2>&1
+powercfg -setactive e9a42b02-d5df-448d-aa00-03f14749eb61 >nul 2>&1
+echo Plano de energia alterado.
+
+echo Desabilitando HPET (pode melhorar FPS)...
+bcdedit /set useplatformclock false >nul 2>&1
+echo HPET desativado.
+
+echo.
+echo Modo Jogos ativado! Reinicie para aplicar.
+pause`;
+
+    // BAT: Manutencao disco
+    const BAT_MANUTENCAO = `@echo off
+chcp 65001 >nul
+echo ============================================
+echo   Catyami Otimizacao - Manutencao de Disco
+echo ============================================
+echo.
+
+echo [1/3] Verificando integridade do sistema...
+sfc /scannow
+echo.
+
+echo [2/3] Verificando imagem do Windows...
+DISM /Online /Cleanup-Image /RestoreHealth
+echo.
+
+echo [3/3] Limpando disco...
+cleanmgr /TUNEUP:0 /AUTOCLEAN
+
+echo.
+echo Manutencao concluida!
+pause`;
+
+    // BAT: Tweak completo
+    const BAT_COMPLETO = `@echo off
+chcp 65001 >nul
+echo ============================================
+echo   Catyami Otimizacao - Tweak Completo
+echo ============================================
+echo.
+
+NET SESSION >nul 2>&1
+IF %ERRORLEVEL% NEQ 0 (
+    powershell -Command "Start-Process cmd -Verb RunAs -ArgumentList '/c %~f0'"
+    exit /b
+)
+
+REM === REDE ===
+echo Otimizando rede...
+ipconfig /flushdns >nul 2>&1
+netsh int ip reset >nul 2>&1
+netsh winsock reset >nul 2>&1
+echo Rede otimizada.
+
+REM === ENERGIA ===
+echo Configurando energia...
+powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 >nul 2>&1
+powercfg -setactive e9a42b02-d5df-448d-aa00-03f14749eb61 >nul 2>&1
+
+REM === SERVICOS ===
+echo Desativando telemetria...
+sc config DiagTrack start=disabled >nul 2>&1
+sc config dmwappushservice start=disabled >nul 2>&1
+
+REM === SISTEMA ===
+echo Ajustando sistema...
+reg add "HKCU\\Control Panel\\Desktop" /v MenuShowDelay /t REG_SZ /d 50 /f >nul 2>&1
+
+echo.
+echo TWEAK COMPLETO APLICADO! Reinicie o PC.
+pause`;
+
+    // BAT: Monitor Hz
+    const BAT_MONITOR = `@echo off
+chcp 65001 >nul
+echo ============================================
+echo   Catyami Otimizacao - Ajuste de Hz Monitor
+echo ============================================
+echo.
+echo.
+
+for /f "tokens=2 delims==" %%i in ('wmic path Win32_VideoController get CurrentRefreshRate /value /format:list 2^>nul ^| find "CurrentRefreshRate"') do (
+    echo Refresh rate atual: %%i Hz
+)
+
+echo.
+echo Para alterar o Hz do monitor:
+echo 1. Clique direito na Area de Trabalho >> Configuracoes de Video
+echo 2. Clique em "Configuracoes avancadas de video"
+echo 3. Clique em "Propriedades do Adaptador de video"
+echo 4. Selecione a maior taxa de atualizacao disponivel
+echo.
+echo.
+pause`;
+
+    // PS1: Painel monitoramento
+    const PS1_PAINEL = `# Catyami Otimizacao - Painel de Monitoramento
+# Execute no PowerShell como Administrador
+
+Write-Host "============================================" -ForegroundColor Cyan
+Write-Host "  Catyami - Painel de Monitoramento" -ForegroundColor Cyan
+Write-Host "============================================"
+Write-Host ""
+
+# CPU
+$cpu = Get-CimInstance Win32_Processor
+Write-Host "  CPU: $($cpu.Name)" -ForegroundColor Green
+Write-Host "  Cores: $($cpu.NumberOfCores) | Threads: $($cpu.NumberOfLogicalProcessors)" -ForegroundColor Green
+
+# RAM
+Write-Host ""
+$os = Get-CimInstance Win32_OperatingSystem
+$totalGB = [math]::Round($os.TotalVisibleMemorySize / 1MB, 1)
+$freeGB = [math]::Round($os.FreePhysicalMemory / 1MB, 1)
+$usedGB = $totalGB - $freeGB
+Write-Host "  RAM: ${usedGB}GB / ${totalGB}GB (livre: ${freeGB}GB)" -ForegroundColor Yellow
+
+# GPU
+Write-Host ""
+$gpus = Get-CimInstance Win32_VideoController
+$gpus | ForEach-Object {
+    Write-Host "  GPU: $($_.Name)" -ForegroundColor Magenta
+    Write-Host "  VRAM: $([math]::Round($_.AdapterRAM / 1GB, 1))GB" -ForegroundColor Magenta
+}
+
+# Disco
+Write-Host ""
+Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | ForEach-Object {
+    $size = [math]::Round($_.Size / 1GB, 1)
+    $free = [math]::Round($_.FreeSpace / 1GB, 1)
+    Write-Host "  Disko $($_.DeviceID): ${free}GB livres de ${size}GB" -ForegroundColor Red
+}
+
+Write-Host ""
+Write-Host "  Uptime: $((Get-Date) - (Get-CimInstance Win32_OperatingSystem).LastBootUpTime | Select-Object -ExpandProperty Days) dias" -ForegroundColor White
+Write-Host ""
+Write-Host "Pressione qualquer tecla para sair..." -ForegroundColor Gray
+$null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')`;
+
+    // BAT: Notebook energia
+    const BAT_NOTEBOOK_ENERGIA = `@echo off
+chcp 65001 >nul
+echo ============================================
+echo   Catyami NB - Otimizacao de Energia
+echo ============================================
+echo.
+
+echo Ativando plano Alto Desempenho...
+powercfg -duplicatescheme 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c >nul 2>&1
+powercfg -setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c >nul 2>&1
+echo Plano de energia: Alto Desempenho
+
+echo Desativando tela ao fechar tampa (nao hibernar)...
+powercfg -change -standby-timeout-ac 0 >nul 2>&1
+powercfg -change -hibernate-timeout-ac 0 >nul 2>&1
+echo Hibernacao desativada no modo AC.
+
+echo.
+echo Energia otimizada!
+pause`;
+
+    // REG: Sem animacoes para notebook
+    const REG_SEM_ANIMACOES = `Windows Registry Editor Version 5.00
+
+; Catyami NB - Desativar Animacoes para Melhorar Performance
+
+[HKEY_CURRENT_USER\\Control Panel\\Desktop]
+"FontSmoothing"="2"
+"MenuShowDelay"="0"
+
+[HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced]
+"ListviewAlphaSelect"=dword:00000000
+"ListviewShadow"=dword:00000000
+"TaskbarAnimations"=dword:00000000
+"TaskbarAnimations"=dword:0
+
+[HKEY_CURRENT_USER\\Control Panel\\Desktop\\WindowMetrics]
+"MinAnimate"="0"`;
+
+    // BAT: Bateria
+    const BAT_BATERIA = `@echo off
+chcp 65001 >nul
+echo ============================================
+echo   Catyami NB - Otimizacao de Bateria
+echo ============================================
+echo.
+
+echo Calibrando bateria...
+powercfg /batteryreport /output "%USERPROFILE%\\battery_report.html"
+echo Relatorio gerado em %USERPROFILE%\\battery_report.html
+echo.
+echo Analise o relatorio para verificar a saude da bateria.
+echo.
+echo Dicas:
+echo  - Mantenha brilho em 50%% ou menos
+echo  - Feche apps em segundo plano
+echo  - Use modo Economia de Bateria do Windows
+echo  - Evite carregar ate 100%% sempre (ideal: 20-80%%)
+echo.
+pause`;
+
+    // BAT: Servicos notebook
+    const BAT_SERVICOS_NOTEBOOK = `@echo off
+chcp 65001 >nul
+echo ============================================
+echo   Catyami NB - Desativar Servicos Pesados
+echo ============================================
+echo.
+
+NET SESSION >nul 2>&1
+IF %ERRORLEVEL% NEQ 0 (
+    powershell -Command "Start-Process cmd -Verb RunAs -ArgumentList '/c %~f0'"
+    exit /b
+)
+
+sc config DiagTrack start=disabled >nul 2>&1
+echo DiagTrack desativado (telemetria)
+
+sc config SysMain start=disabled >nul 2>&1
+echo SysMain desativado (reduz uso de disco)
+
+echo.
+echo Servicos otimizados.
+pause`;
+
+    // BAT: Otimizar WiFi
+    const BAT_WIFI = `@echo off
+chcp 65001 >nul
+echo ============================================
+echo   Catyami NB - Otimizacao de WiFi
+echo ============================================
+echo.
+
+echo Flush DNS...
+ipconfig /flushdns >nul 2>&1
+
+echo Resetando winsock...
+netsh winsock reset >nul 2>&1
+
+echo Resetando TCP IP...
+netsh int ip reset >nul 2>&1
+
+echo Otimizando TCP...
+netsh interface tcp set global autotuning=normal >nul 2>&1
+
+echo.
+echo WiFi otimizado! Reinicie para aplicar.
+pause`;
+
+    // BAT: Limpar background
+    const BAT_BACKGROUND = `@echo off
+chcp 65001 >nul
+echo ============================================
+echo   Catyami NB - Limpar Processos Background
+echo ============================================
+echo.
+
+echo Finalizando processos desnecessarios...
+taskkill /f /im OneDrive.exe >nul 2>&1
+taskkill /f /im Skype.exe >nul 2>&1
+taskkill /f /im Spotify.exe >nul 2>&1
+taskkill /f /im Discord.exe >nul 2>&1
+taskkill /f /im Steam.exe >nul 2>&1
+taskkill /f /im Origin.exe >nul 2>&1
+taskkill /f /im GameBar.exe >nul 2>&1
+taskkill /f /im GameBarPresenceServer.exe >nul 2>&1
+
+echo.
+echo Processos em segundo plano finalizados.
+tasklist
+echo.
+echo Nota: Processos essenciais nao foram afetados.
+pause`;
+
+    // BAT: Modo viagem (o famoso 08_modo_viagem.bat)
+    const BAT_MODO_VIAGEM = `@echo off
+chcp 65001 >nul
+echo ============================================
+echo   Catyami NB - Modo Viagem / Ultra Leve
+echo ============================================
+echo   Para notebooks com poucos recursos
+echo ============================================
+echo.
+
+NET SESSION >nul 2>&1
+IF %ERRORLEVEL% NEQ 0 (
+    powershell -Command "Start-Process cmd -Verb RunAs -ArgumentList '/c %~f0'"
+    exit /b
+)
+
+echo 1/5 Desativando Wi-Fi temporariamente...
+netsh interface set interface "Wi-Fi" disabled >nul 2>&1
+echo Wi-Fi desativado (para economizar).
+
+echo 2/5 Modo aviao e economia maxima...
+powercfg -setactive a1841308-3541-4fab-bc81-f71556f20b4a >nul 2>&1
+echo Plano Power Saver ativado.
+
+echo 3/5 Fechando todos os processos nao essenciais...
+taskkill /f /im OneDrive.exe >nul 2>&1
+taskkill /f /im Dropbox.exe >nul 2>&1
+taskkill /f /im GoogleDriveFS.exe >nul 2>&1
+taskkill /f /im Discord.exe >nul 2>&1
+taskkill /f /im Slack.exe >nul 2>&1
+taskkill /f /im Teams.exe >nul 2>&1
+taskkill /f /im Spotify.exe >nul 2>&1
+taskkill /f /im Steam.exe >nul 2>&1
+taskkill /f /im Origin.exe >nul 2>&1
+taskkill /f /im EpicGamesLauncher.exe >nul 2>&1
+taskkill /f /im Skype.exe >nul 2>&1
+taskkill /f /im GameBar.exe >nul 2>&1
+echo Processos nao essenciais finalizados.
+
+echo 4/5 Desligando telemetria...
+sc config DiagTrack start=disabled >nul 2>&1
+sc stop DiagTrack >nul 2>&1
+echo Telemetria desativada.
+
+echo 5/5 Limpando cache...
+ipconfig /flushdns >nul 2>&1
+del /q /f /s %TEMP%\\* >nul 2>&1
+echo Cache limpo.
+
+echo.
+echo ============================================
+echo   MODO VIAGEM ATIVADO!
+echo ============================================
+echo   Seu notebook esta no modo mais leve
+echo   possivel. Wi-Fi desativado.
+echo.
+echo   Para REVERTER, digite:
+echo     powercfg -setactive (seu plano normal)
+echo     netsh interface set interface "Wi-Fi" enabled
+echo ============================================
+echo.
+pause`;
+
+    // TXT: Leia notebook
+    const TXT_NOTES_LEIA = `LEIA PRIMEIRO - Catyami Otimizacao Notebook
+================================================
+
+1. Execute os scripts como ADMINISTRADOR (botao direito > Executar como administrador).
+
+2. ORDEM RECOMENDADA:
+   01_limpeza_basica.bat
+   02_energia_notebook.bat
+   03_desativar_animacoes.reg (de duplo clique e confirme)
+   04_plano_bateria.bat
+   05_desativar_servicos.bat
+   06_otimizar_wifi.bat
+   07_limpar_background.bat
+   08_modo_viagem.bat (use apenas quando precisar de maxima performance)
+
+3. PARA REVERTER QUALQUER ALTERACAO, execute o script correspondente novamente
+   ou pesquise o comando no Google para entender o que ele faz.
+
+4. O script 08_modo_viagem.bat e EXTREMO. Use apenas quando precisar de
+   maxima autonomia ou performance sem Wi-Fi.
+
+Suporte: entre em contato via nossa pagina.
+Boa otimizacao!`;
+
+    // TXT: Leia celular
+    const TXT_CELULAR_LEIA = `LEIA PRIMEIRO - Catyami Otimizacao Celular
+================================================
+
+Abra o arquivo 01_guia_otimizacao.html no navegador do seu celular Android.
+
+Ele contem todas as instrucoes detalhadas para otimizar seu dispositivo.
+
+Passos rapidos:
+1. Abra a guia no navegador
+2. Siga cada secao na ordem
+3. Reinicie o celular ao final
+
+Suporte: entre em contato via nossa pagina.`;
+
+    // HTML: Guia celular
+    const HTML_GUIA_CELULAR = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catyami - Guia Android</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:sans-serif;background:#0a0a0a;color:#ccc;padding:1.5rem;line-height:1.7}
+        h1{color:#00ff88;font-size:1.5rem;text-align:center;margin-bottom:1rem}
+        h2{color:#fff;font-size:1.1rem;margin:1.5rem 0 .5rem}
+        .step{background:#151515;border-radius:12px;padding:1rem;margin:.75rem 0;border-left:3px solid #00ff88}
+        .step .num{color:#00ff88;font-weight:700}
+        .tip{background:#1a1a2e;border-radius:8px;padding:.75rem;margin:.5rem 0;font-size:.9rem}
+        .tip b{color:#ffd700}
+    </style>
+</head>
+<body>
+    <h1>Catyami Otimizacao Android</h1>
+    <p style="text-align:center;opacity:.7">Guia completo para deixar seu Android mais rapido!</p>
+
+    <h2>1. Limpar Cache de Apps</h2>
+    <div class="step">
+        <span class="num">Passo a passo:</span><br>
+        Configuracoes > Apps > Selecione cada app > Armazenamento > Limpar Cache<br>
+        Faca isso para apps pesados: Facebook, Instagram, TikTok, YouTube, Chrome.
+    </div>
+
+    <h2>2. Ativar Opcoes de Desenvolvedor</h2>
+    <div class="step">
+        <span class="num">Passo a passo:</span><br>
+        Configuracoes > Sobre o telefone > Toque 7x em "Numero da versao" (Build Number)<br>
+        Voce vera "Voce e um desenvolvedor!"<br>
+        Depois va em: Configuracoes > Opcoes de desenvolvedor
+    </div>
+
+    <h2>3. Desativar Animacoes (Developer Options)</h2>
+    <div class="step">
+        <span class="num">Dentro de Opcoes de Desenvolvedor, procure:</span><br>
+        - Escala de animacao da janela: <b>Desligar</b><br>
+        - Escala de animacao de transicao: <b>Desligar</b><br>
+        - Escala de duracao do animador: <b>Desligar</b>
+    </div>
+    <div class="tip"><b>Dica:</b> Isso deixa o celular MUITO mais rapido visualmente!</div>
+
+    <h2>4. Desativar/Desinstalar Apps Inuteis</h2>
+    <div class="step">
+        Vá em Configuracoes > Apps e revise:<br>
+        - Desative apps de fabrica que voce nao usa<br>
+        - Desinstale apps que nao usa ha +30 dias<br>
+        - Use versoes "Lite" ou "Go" de apps pesados
+    </div>
+    <div class="tip"><b>Apps Lite:</b> Facebook Lite, Instagram Lite, Google Go, Gallery Go, Files Go</div>
+
+    <h2>5. Limpar Lixeira e Downloads</h2>
+    <div class="step">
+        - Abra o app "Files" (arquivos) do Google<br>
+        - Toque em "Limpar" para sugestoes de limpeza<br>
+        - Apague downloads antigos e duplicatas<br>
+        - Limpe a lixeira da galeria
+    </div>
+
+    <h2>6. Otimizar Armazenamento</h2>
+    <div class="step">
+        Configuracoes > Armazenamento > Libere espaco<br>
+        Remova:<br>
+        - WhatsApp media antiga (Config. > Armazenamento e dados > Gerenciar armazenamento)<br>
+        - Downloads duplicados<br>
+        - Screenshots desnecessarios
+    </div>
+
+    <h2>7. Apps Recomendados</h2>
+    <div class="step">
+        <b>Para monitorar:</b><br>
+        - AccuBattery (saude da bateria)<br>
+        - CPU-Z (info do hardware)<br>
+        - SD Maid (limpeza avancada)<br>
+        - Files by Google (gerenciar arquivos)
+    </div>
+
+    <h2>8. Reiniciar Periodicamente</h2>
+    <div class="step">
+        Reinicie o celular pelo menos 1 vez por semana. Isso libera memoria acumulada e fecha processos travados.
+    </div>
+    <div class="tip"><b>Dica extra:</b> Nao use apps de "limpeza RAM" - eles fazem mais mal do que bem no Android moderno.</div>
+
+    <h2>9. Atualizacoes</h2>
+    <div class="step">
+        Mantenha o Android atualizado. Vá em: Configuracoes > Sistema > Atualizacao do sistema<br>
+        Tambem atualize apps pela Play Store regularmente.
+    </div>
+
+    <p style="text-align:center;margin-top:2rem;color:#00ff88;font-weight:700">Catyami Otimizacao - Todos os direitos reservados</p>
+</body>
+</html>`;
+    </script>
+</body>
+</html>
