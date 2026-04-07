@@ -412,7 +412,6 @@ defrag C: /U /V</div>
     /* ==================== STATE ==================== */
     let currentProduct = null;
     let currentOrderId = null;
-    let currentMpPaymentId = null;
     let fileUploaded = false;
     let uploadedFile = null;
     let pollingInterval = null;
@@ -470,23 +469,24 @@ defrag C: /U /V</div>
             if (!res.ok) throw new Error(data.error || 'Erro ao criar pedido');
 
             currentOrderId = data.order_id;
-            currentMpPaymentId = data.mp_payment_id;
 
-            // QR Code do MercadoPago
+            // QR Code do Asaas
             document.getElementById('qrCode').innerHTML = '';
             if (data.qr_code_base64) {
-                document.getElementById('qrCode').innerHTML = `<img src="data:image/png;base64,${data.qr_code_base64}" style="width:200px;height:200px;border-radius:8px;">`;
-            } else if (data.qr_code) {
-                new QRCode(document.getElementById('qrCode'), { text: data.qr_code, width: 200, height: 200, colorDark: '#00ff88', colorLight: '#151515' });
+                document.getElementById('qrCode').innerHTML = `<img src="${data.qr_code_base64}" style="width:200px;height:200px;border-radius:8px;">`;
+            } else if (data.pix_code) {
+                new QRCode(document.getElementById('qrCode'), { text: data.pix_code, width: 200, height: 200, colorDark: '#00ff88', colorLight: '#151515' });
             } else {
                 document.getElementById('qrCode').innerHTML = '<p style="color:var(--danger)">Erro ao gerar QR Code</p>';
             }
 
-            // Se tiver ticket_url, abre no MP
-            if (data.ticket_url) {
-                document.getElementById('pixKeyInput').value = data.ticket_url;
-                document.querySelector('.pix-key button').textContent = 'Abrir MP';
-                document.querySelector('.pix-key button').onclick = () => window.open(data.ticket_url, '_blank');
+            // Se tiver payment_url, abre no Asaas
+            if (data.payment_url) {
+                document.getElementById('pixKeyInput').value = data.pix_brcode || data.pix_code;
+                document.querySelector('.pix-key button').textContent = 'Abrir Asaas';
+                document.querySelector('.pix-key button').onclick = () => window.open(data.payment_url, '_blank');
+            } else if (data.pix_brcode) {
+                document.getElementById('pixKeyInput').value = data.pix_brcode;
             }
 
             document.getElementById('confirmBtn').textContent = 'Ja paguei, confirmar';
@@ -498,7 +498,6 @@ defrag C: /U /V</div>
         } catch (e) {
             console.log('Erro:', e);
             document.getElementById('qrCode').innerHTML = `<p style="color:var(--danger)">Erro ao conectar ao servidor. Verifique se o backend esta rodando.</p>`;
-            document.getElementById('confirmBtn').textContent = 'Erro';
         }
     }
 

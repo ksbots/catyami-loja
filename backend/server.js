@@ -5,13 +5,20 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const archiver = require('archiver');
-const { MercadoPagoConfig, Payment } = require('mercadopago');
+const axios = require('axios');
 
-// ==================== INIT MERCADO PAGO ====================
-const mpClient = new MercadoPagoConfig({
-    accessToken: process.env.MP_ACCESS_TOKEN
+// ==================== ASAAS CONFIG ====================
+const ASAAS_TOKEN = process.env.ASAAS_TOKEN || '$aact_prod_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OjRkNGM0ZWNhLTVjZjgtNDgxZC05OGJlLTYyYmVhZDkxYzgwYTo6JGFhY2hfZGNiNmRlMmYtYzdjNC00YmY2LWJhNjAtNGU1MWIwZjYzZTAy';
+const ASAAS_URL = 'https://api.asaas.com/v3';
+
+const asaasClient = axios.create({
+    baseURL: ASAAS_URL,
+    headers: {
+        'accept': 'application/json',
+        'content-type': 'application/json',
+        'access_token': ASAAS_TOKEN
+    }
 });
-const paymentClient = new Payment(mpClient);
 
 // ==================== EXPRESS ====================
 const app = express();
@@ -19,7 +26,6 @@ app.use(cors());
 app.use(express.json());
 
 // ==================== STORAGE CONFIG ====================
-// Use /data for Railway persistent storage, or local
 const dataDir = process.env.DATA_DIR || __dirname;
 const uploadsDir = path.join(dataDir, 'uploads');
 const dbPath = path.join(dataDir, 'database.sqlite');
@@ -37,13 +43,13 @@ const storage = multer.diskStorage({
 });
 const upload = multer({
     storage,
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+    limits: { fileSize: 10 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
         if (allowed.includes(file.mimetype)) {
             cb(null, true);
         } else {
-            cb(new Error('Apenas arquivos de imagem ou PDF sao aceitos'));
+            cb(new Error('Apenas imagens ou PDF'));
         }
     }
 });
@@ -61,19 +67,21 @@ const db = new sqlite3.Database(dbPath, (err) => {
         product TEXT NOT NULL,
         product_name TEXT NOT NULL,
         price REAL NOT NULL,
-        mp_payment_id TEXT UNIQUE,
+        asaas_charge_id TEXT UNIQUE,
         status TEXT DEFAULT 'pending',
         customer_email TEXT DEFAULT '',
         customer_name TEXT DEFAULT '',
+        customer_cpf TEXT DEFAULT '',
         receipt_path TEXT DEFAULT '',
-        mp_qr_code TEXT DEFAULT '',
-        qr_code_base64 TEXT DEFAULT '',
+        asaas_pix_qr TEXT DEFAULT '',
+        asaas_pix_brcode TEXT DEFAULT '',
+        asaas_payment_url TEXT DEFAULT '',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
     db.run(`CREATE TABLE IF NOT EXISTS webhooks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        payment_id TEXT NOT NULL,
+        charge_id TEXT,
         status TEXT,
         payload TEXT,
         received_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -107,7 +115,7 @@ function dbAll(sql, params = []) {
     });
 }
 
-// ==================== PRODUCTS CONFIG ====================
+// ==================== PRODUCTS ====================
 const PRODUCTS = {
     pc:       { name: 'PC Desktop', price: 19.90 },
     notebook: { name: 'Notebook', price: 19.90 },
@@ -117,12 +125,10 @@ const PRODUCTS = {
 
 // ==================== ROUTES ====================
 
-// --- Health check ---
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'online', timestamp: new Date().toISOString() });
+    res.json({ status: 'online', gateway: 'Asaas', timestamp: new Date().toISOString() });
 });
 
-// --- Lista todos os produtos ---
 app.get('/api/products', (req, res) => {
     res.json(
         Object.entries(PRODUCTS).map(([id, p]) => ({
@@ -131,10 +137,10 @@ app.get('/api/products', (req, res) => {
     );
 });
 
-// --- Cria pedido com Pix ---
+// --- Criar pedido com Pix Asaas ---
 app.post('/api/create-order', async (req, res) => {
     try {
-        const { product, customer_email = '', customer_name = '' } = req.body;
+        const { product, customer_email = '', customer_name = '', customer_cpf = '' } = req.body;
 
         if (!PRODUCTS[product]) {
             return res.status(400).json({ error: 'Produto invalido' });
@@ -142,58 +148,66 @@ app.post('/api/create-order', async (req, res) => {
 
         const prod = PRODUCTS[product];
 
-        // Salva pedido no banco
+        // Salva no banco
         await dbRun(
-            `INSERT INTO orders (product, product_name, price, customer_email, customer_name)
-             VALUES (?, ?, ?, ?, ?)`,
-            [product, prod.name, prod.price, customer_email, customer_name]
+            `INSERT INTO orders (product, product_name, price, customer_email, customer_name, customer_cpf)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [product, prod.name, prod.price, customer_email, customer_name, customer_cpf]
         );
 
         const result = await dbGet('SELECT * FROM orders ORDER BY id DESC LIMIT 1');
         const orderId = result.id;
 
-        // Cria pagamento no MercadoPago
-        const mpPayment = await paymentClient.create({
-            body: {
-                transaction_amount: prod.price,
-                description: `Catyami - ${prod.name}`,
-                payment_method_id: 'pix',
-                payer: {
-                    email: customer_email || 'cliente@catyami.com',
-                    first_name: customer_name || 'Cliente'
-                },
-                notification_url: `${process.env.FRONTEND_URL || 'http://localhost:5000'}/api/webhook`,
-                external_reference: String(orderId)
-            }
+        // Cria cobranca Pix no Asaas
+        const asaasResponse = await asaasClient.post('/payments', {
+            billingType: 'PIX',
+            value: prod.price,
+            dueDate: new Date().toISOString().split('T')[0],
+            description: `Catyami Otimizacao - ${prod.name}`,
+            externalReference: String(orderId),
+            customer: customer_name || 'Cliente Catyami',
+            customerEmail: customer_email || `cliente${orderId}@catyami.com`
         });
 
-        // Atualiza pedido com infos do MP
-        const qrCode = mpPayment.point_of_interaction?.transaction_data?.qr_code || '';
-        const qrCodeBase64 = mpPayment.point_of_interaction?.transaction_data?.qr_code_base64 || '';
+        const chargeId = asaasResponse.data.id;
+
+        // Consulta QR Code Pix
+        let pixQr = '', pixBrcode = '';
+        try {
+            const pixInfo = await asaasClient.get(`/payments/${chargeId}/pixQrCode`);
+            pixQr = pixInfo.data.payload || '';
+            pixBrcode = pixInfo.data.brCode || pixQr;
+        } catch (pixErr) {
+            console.log('Erro ao obter QR Pix:', pixErr.message);
+        }
 
         await dbRun(
-            `UPDATE orders SET mp_payment_id = ?, mp_qr_code = ?, qr_code_base64 = ? WHERE id = ?`,
-            [mpPayment.id, qrCode, qrCodeBase64, orderId]
+            `UPDATE orders SET asaas_charge_id = ?, asaas_pix_qr = ?, asaas_pix_brcode = ?, asaas_payment_url = ? WHERE id = ?`,
+            [chargeId, pixQr, pixBrcode, asaasResponse.data.invoiceUrl || '', orderId]
         );
+
+        console.log(`Pedido #${orderId} criado no Asaas: ${chargeId}`);
 
         res.json({
             success: true,
             order_id: orderId,
-            mp_payment_id: mpPayment.id,
-            qr_code: qrCode,
-            qr_code_base64: qrCodeBase64,
-            ticket_url: mpPayment.point_of_interaction?.transaction_data?.ticket_url || '',
+            asaas_charge_id: chargeId,
+            pix_code: pixQr,
+            pix_brcode: pixBrcode,
+            payment_url: asaasResponse.data.invoiceUrl || '',
             price: prod.price,
-            product_name: prod.name
+            product_name: prod.name,
+            due_date: asaasResponse.data.dueDate || ''
         });
 
     } catch (error) {
-        console.log('Erro ao criar pedido:', error.message);
-        res.status(500).json({ error: 'Erro ao criar pedido. Tente novamente.' });
+        const errMsg = error.response?.data?.errors?.[0]?.description || error.message;
+        console.log('Erro ao criar pedido:', errMsg);
+        res.status(500).json({ error: 'Erro ao criar pedido: ' + errMsg });
     }
 });
 
-// --- Consulta status de um pedido ---
+// --- Consulta pedido ---
 app.get('/api/order/:id', async (req, res) => {
     try {
         const order = await dbGet('SELECT * FROM orders WHERE id = ?', [req.params.id]);
@@ -201,19 +215,23 @@ app.get('/api/order/:id', async (req, res) => {
             return res.status(404).json({ error: 'Pedido nao encontrado' });
         }
 
-        // Se ainda pendente, consulta status atualizado no MP
-        if (order.status === 'pending' && order.mp_payment_id) {
+        // Consulta status atualizado no Asaas se pendente
+        if (order.status === 'pending' && order.asaas_charge_id) {
             try {
-                const mpStatus = await paymentClient.get({ url: '/' + order.mp_payment_id });
-                if (mpStatus.status === 'approved' && order.status !== 'approved') {
+                const asaasOrder = await asaasClient.get(`/payments/${order.asaas_charge_id}`);
+                const asaasStatus = asaasOrder.data.status; // SCHEDULED, CONFIRMED, PENDING, RECEIVED...
+
+                if (asaasStatus === 'RECEIVED' && order.status !== 'approved') {
                     await dbRun(
                         `UPDATE orders SET status = 'approved', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
                         [order.id]
                     );
                     order.status = 'approved';
+                } else if (asaasStatus !== 'PENDING' && asaasStatus !== 'SCHEDULED' && order.status === 'pending') {
+                    // Other statuses like OVERDUE
                 }
             } catch (e) {
-                // ignora se nao conseguir consultar MP
+                // Ignora erro de consulta
             }
         }
 
@@ -223,7 +241,7 @@ app.get('/api/order/:id', async (req, res) => {
     }
 });
 
-// --- Upload de comprovante ---
+// --- Upload comprovante ---
 app.post('/api/order/:id/receipt', upload.single('receipt'), async (req, res) => {
     try {
         const order = await dbGet('SELECT * FROM orders WHERE id = ?', [req.params.id]);
@@ -240,48 +258,50 @@ app.post('/api/order/:id/receipt', upload.single('receipt'), async (req, res) =>
 
         res.json({ success: true, receipt: receiptPath, message: 'Comprovante enviado!' });
     } catch (error) {
-        console.log('Erro ao salvar comprovante:', error.message);
         res.status(500).json({ error: 'Erro ao enviar comprovante' });
     }
 });
 
-// --- Webhook do MercadoPago ---
+// --- Webhook Asaas ---
 app.post('/api/webhook', async (req, res) => {
     try {
-        const { data, topic } = req.body;
+        const body = req.body;
 
-        // MercadoPago envia como query ou body dependendo do metodo
-        const paymentId = data?.id || req.query['data.id'];
-        if (!paymentId) {
-            return res.status(200).json({ received: true });
-        }
+        // Asaas sends: event, charge (with id, status, etc)
+        const chargeId = body?.charge?.id || body?.data?.charge || body?.id;
+        const newStatus = body?.charge?.status || body?.data?.status || body?.status;
 
-        // Salva no log de webhooks
+        console.log('Webhook Asaas recebido:', JSON.stringify(body).substring(0, 200));
+
+        // Log webhook
         await dbRun(
-            `INSERT INTO webhooks (payment_id, status, payload) VALUES (?, ?, ?)`,
-            [paymentId, 'unknown', JSON.stringify(req.body)]
+            `INSERT INTO webhooks (charge_id, status, payload) VALUES (?, ?, ?)`,
+            [chargeId, newStatus, JSON.stringify(body)]
         );
 
-        // Consulta pagamento no MP
-        const mpPayment = await paymentClient.get({ url: '/' + paymentId });
-        const mpStatus = mpPayment.status; // 'approved', 'pending', 'rejected'
-        const externalRef = mpPayment.external_reference;
-
-        if (mpStatus === 'approved' && externalRef) {
+        // Se pagamento confirmado (RECEIVED = payment received by Asaas)
+        if (chargeId && (newStatus === 'RECEIVED' || newStatus === 'CONFIRMED')) {
             await dbRun(
-                `UPDATE orders SET status = 'approved', updated_at = CURRENT_TIMESTAMP WHERE mp_payment_id = ? AND status != 'approved'`,
-                [paymentId]
+                `UPDATE orders SET status = 'approved', updated_at = CURRENT_TIMESTAMP WHERE asaas_charge_id = ? AND status != 'approved'`,
+                [chargeId]
             );
+            console.log(`Pagamento aprovado via webhook: ${chargeId}`);
         }
 
-        res.status(200).json({ received: true });
+        res.status(200).json({ success: true });
     } catch (error) {
-        console.log('Erro no webhook:', error.message);
+        const errMsg = error.response?.data?.error || error.message;
+        console.log('Erro no webhook Asaas:', errMsg);
         res.status(200).json({ received: true });
     }
 });
 
-// ==================== PRODUCT FOLDER MAPPING ====================
+// --- Webhook GET (Asaas verification) ---
+app.get('/api/webhook', (req, res) => {
+    res.status(200).json({ received: true });
+});
+
+// --- Download do produto (apos pagamento) ---
 const FOLDER_NAMES = {
     pc: 'PC Desktop',
     notebook: 'Notebook',
@@ -289,23 +309,19 @@ const FOLDER_NAMES = {
     combo: 'Pacote Completo'
 };
 
-// --- Download de produto (apos pagamento aprovado) ---
 app.get('/api/download/:orderId/:product', async (req, res) => {
     try {
         const { orderId, product } = req.params;
 
-        // Verifica se o pedido existe e esta aprovado
         const order = await dbGet('SELECT * FROM orders WHERE id = ?', [orderId]);
         if (!order) {
             return res.status(404).json({ error: 'Pedido nao encontrado' });
         }
 
-        // Aceita download se o pedido foi aprovado OU se e um dos produtos do combo
         if (order.status !== 'approved' && order.status !== 'confirmed') {
-            return res.status(403).json({ error: 'Pagamento ainda nao confirmado' });
+            return res.status(403).json({ error: 'Pagamento nao confirmado' });
         }
 
-        // Determina quais pastas incluir no ZIP
         let foldersToZip = [];
         const productsDir = path.join(__dirname, 'products');
 
@@ -319,15 +335,13 @@ app.get('/api/download/:orderId/:product', async (req, res) => {
             return res.status(400).json({ error: 'Produto invalido' });
         }
 
-        // Cria o ZIP e faz stream
         const zipName = `Catyami_Otimizacao_${product}_${Date.now()}.zip`;
         res.setHeader('Content-Disposition', `attachment; filename="${zipName}"`);
         res.setHeader('Content-Type', 'application/zip');
 
         const archive = archiver('zip', { zlib: { level: 6 } });
 
-        archive.on('error', (err) => {
-            console.log('Erro ao criar ZIP:', err);
+        archive.on('error', function(err) {
             if (!res.headersSent) {
                 res.status(500).json({ error: 'Erro ao gerar ZIP' });
             }
@@ -335,7 +349,6 @@ app.get('/api/download/:orderId/:product', async (req, res) => {
 
         archive.pipe(res);
 
-        // Adiciona cada pasta de produto ao ZIP
         for (const folder of foldersToZip) {
             const folderPath = path.join(productsDir, folder);
             if (fs.existsSync(folderPath)) {
@@ -343,7 +356,6 @@ app.get('/api/download/:orderId/:product', async (req, res) => {
             }
         }
 
-        // Adiciona arquivo README
         const readme = `=== CATYAMI OTIMIZACAO ===
 Produto: ${product === 'combo' ? 'Pacote Completo (PC + Notebook + Celular)' : FOLDER_NAMES[product] || product}
 Pedido: #${orderId}
@@ -356,31 +368,53 @@ INSTRUCOES:
 4. Para .reg, de duplo clique e confirme
 5. Reinicie o dispositivo ao final
 
-PARA MENOR PING/JOGOS:
-- PC: Execute 08_otimizar_ping.bat ou 09_Catyami_NetBooster.bat
-- Notebook: Execute 06_otimizar_wifi.bat e 09_otimizar_ping.bat
-- Android: Abra 01_guia_otimizacao.html para instrucoes de DNS
-
-Suporte: Catyami Otimizacao
-
 Boa otimizacao!
 `;
         archive.append(Buffer.from(readme), { name: 'README_Catyami.txt' });
 
         await archive.finalize();
 
-        // Loga o download
         await dbRun(
             `UPDATE orders SET status = 'confirmed', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status != 'confirmed'`,
             [orderId]
         );
 
-        console.log(`Download enviado: ${zipName} para pedido #${orderId}`);
+        console.log(`Download: ${zipName} para pedido #${orderId}`);
     } catch (error) {
         console.log('Erro no download:', error.message);
         if (!res.headersSent) {
             res.status(500).json({ error: 'Erro ao gerar download' });
         }
+    }
+});
+
+// --- Admin: aprovar manualmente ---
+app.post('/api/admin/order/:id/approve', async (req, res) => {
+    try {
+        await dbRun(`UPDATE orders SET status = 'approved', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao aprovar' });
+    }
+});
+
+// --- Admin: rejeitar ---
+app.post('/api/admin/order/:id/reject', async (req, res) => {
+    try {
+        await dbRun(`UPDATE orders SET status = 'rejected', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao rejeitar' });
+    }
+});
+
+// --- Servir comprovante ---
+app.get('/api/receipt/:filename', (req, res) => {
+    const filePath = path.join(uploadsDir, req.params.filename);
+    if (fs.existsSync(filePath)) {
+        res.sendFile(filePath);
+    } else {
+        res.status(404).json({ error: 'Comprovante nao encontrado' });
     }
 });
 
@@ -397,36 +431,6 @@ app.get('/api/admin/orders', async (req, res) => {
     }
 });
 
-// --- Aprovar pedido manualmente ---
-app.post('/api/admin/order/:id/approve', async (req, res) => {
-    try {
-        await dbRun(`UPDATE orders SET status = 'approved', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [req.params.id]);
-        res.json({ success: true, message: 'Pedido aprovado' });
-    } catch (error) {
-        res.status(500).json({ error: 'Erro ao aprovar pedido' });
-    }
-});
-
-// --- Rejeitar pedido ---
-app.post('/api/admin/order/:id/reject', async (req, res) => {
-    try {
-        await dbRun(`UPDATE orders SET status = 'rejected', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [req.params.id]);
-        res.json({ success: true, message: 'Pedido rejeitado' });
-    } catch (error) {
-        res.status(500).json({ error: 'Erro ao rejeitar pedido' });
-    }
-});
-
-// --- Servir comprovante de upload ---
-app.get('/api/receipt/:filename', (req, res) => {
-    const filePath = path.join(uploadsDir, req.params.filename);
-    if (fs.existsSync(filePath)) {
-        res.sendFile(filePath);
-    } else {
-        res.status(404).json({ error: 'Comprovante nao encontrado' });
-    }
-});
-
 // ==================== SERVE FRONTEND ====================
 const frontendPath = path.join(__dirname, '..');
 app.use(express.static(frontendPath));
@@ -439,7 +443,12 @@ app.get('*', (req, res) => {
 // ==================== START ====================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log(`\n  Catyami Backend rodando em http://localhost:${PORT}`);
+    console.log('\n  ==============================================');
+    console.log('  CATYAMI OTIMIZACAO - BACKEND RODANDO');
+    console.log('  ==============================================');
     console.log(`  Frontend: http://localhost:${PORT}`);
-    console.log(`  Admin Painel: http://localhost:${PORT}/api/admin/orders\n`);
+    console.log(`  Admin: http://localhost:${PORT}/admin.html`);
+    console.log(`  Gateway: Asaas (PIX)`);
+    console.log(`  Porta: ${PORT}`);
+    console.log('  ==============================================\n');
 });

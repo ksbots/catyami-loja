@@ -39,6 +39,7 @@
     </div>
 
     <script>
+    const API = '';
     const params = new URLSearchParams(window.location.search);
     const orderId = params.get('order');
 
@@ -54,7 +55,7 @@
             if (attempts >= maxAttempts) return show('Tempo expired. Contate o suporte.', 'error');
             attempts++;
             try {
-                const res = await fetch(`/api/order/${orderId}`);
+                const res = await fetch(`${API}/api/order/${orderId}`);
                 const order = await res.json();
 
                 if (order.status === 'approved' || order.status === 'confirmed') {
