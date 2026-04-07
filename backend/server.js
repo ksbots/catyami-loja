@@ -93,6 +93,13 @@ const db = new sqlite3.Database(dbPath, (err) => {
         payload TEXT,
         received_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
+    db.run(`CREATE TABLE IF NOT EXISTS admin_sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ip TEXT DEFAULT '',
+        user_agent TEXT DEFAULT '',
+        success INTEGER DEFAULT 0,
+        attempt_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
 });
 
 function dbRun(sql, params = []) {
@@ -143,6 +150,66 @@ app.get('/api/products', (req, res) => {
         }))
     );
 });
+
+// ==================== ADMIN AUTH ====================
+const ADMIN_PASSWORD = 'adm721895';
+const OWNER_IP = '177.128.100.106';
+const activeSessions = {}; // session_token -> { ip, timestamp }
+
+function getClientIP(req) {
+    return req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+           req.headers['x-real-ip'] ||
+           req.connection?.remoteAddress ||
+           req.socket?.remoteAddress ||
+           '0.0.0.0';
+}
+
+app.post('/api/admin/login', async (req, res) => {
+    const { password } = req.body;
+    const ip = getClientIP(req);
+    const userAgent = req.headers['user-agent'] || 'unknown';
+
+    if (password === ADMIN_PASSWORD) {
+        const token = 'adm_' + Date.now() + '_' + Math.random().toString(36).substring(2);
+        activeSessions[token] = { ip, timestamp: Date.now() };
+
+        await dbRun(`INSERT INTO admin_sessions (ip, user_agent, success) VALUES (?, ?, 1)`,
+            [ip, userAgent]);
+
+        console.log(`Admin login SUCESSO de ${ip}`);
+        res.json({ success: true, token, isOwner: ip === OWNER_IP });
+    } else {
+        await dbRun(`INSERT INTO admin_sessions (ip, user_agent, success) VALUES (?, ?, 0)`,
+            [ip, userAgent]);
+
+        console.log(`Admin login FALHOU de ${ip}`);
+        res.status(401).json({ error: 'Senha incorreta', ip });
+    }
+});
+
+app.get('/api/admin/sessions', async (req, res) => {
+    try {
+        const sessions = await dbAll(`SELECT * FROM admin_sessions ORDER BY id DESC LIMIT 50`);
+        res.json(sessions);
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao listar sessoes' });
+    }
+});
+
+function requireAuth(req, res, next) {
+    const token = req.headers['x-admin-token'];
+    if (!token || !activeSessions[token]) {
+        return res.status(401).json({ error: 'Nao autenticado' });
+    }
+
+    // Session expira em 24h
+    if (Date.now() - activeSessions[token].timestamp > 24 * 60 * 60 * 1000) {
+        delete activeSessions[token];
+        return res.status(401).json({ error: 'Sessao expirada' });
+    }
+
+    next();
+}
 
 // --- Criar pedido com Pix Asaas ---
 app.post('/api/create-order', async (req, res) => {
@@ -483,7 +550,7 @@ Boa otimizacao!
 });
 
 // --- Admin: aprovar manualmente ---
-app.post('/api/admin/order/:id/approve', async (req, res) => {
+app.post('/api/admin/order/:id/approve', requireAuth, async (req, res) => {
     try {
         await dbRun(`UPDATE orders SET status = 'approved', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [req.params.id]);
         res.json({ success: true });
@@ -493,12 +560,25 @@ app.post('/api/admin/order/:id/approve', async (req, res) => {
 });
 
 // --- Admin: rejeitar ---
-app.post('/api/admin/order/:id/reject', async (req, res) => {
+app.post('/api/admin/order/:id/reject', requireAuth, async (req, res) => {
     try {
         await dbRun(`UPDATE orders SET status = 'rejected', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [req.params.id]);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: 'Erro ao rejeitar' });
+    }
+});
+
+// --- Admin: listar pedidos (protegido) ---
+app.get('/api/admin/orders', requireAuth, async (req, res) => {
+    try {
+        const orders = await dbAll(
+            `SELECT id, product_name, price, status, customer_name, customer_email, receipt_path, created_at
+             FROM orders ORDER BY id DESC`
+        );
+        res.json(orders);
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao listar pedidos' });
     }
 });
 

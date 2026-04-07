@@ -93,7 +93,7 @@
         const productNames = {pc:'PC Desktop',notebook:'Notebook',celular:'Celular (Android)'};
 
         let links = products.map(p =>
-            `<a href="/api/download/${order.id}/${p}" class="dl-btn"><i class="fas fa-download"></i> Baixar ${productNames[p]}</a>`
+            `<a href="${API}/api/download/${order.id}/${p}" class="dl-btn"><i class="fas fa-download"></i> Baixar ${productNames[p]}</a>`
         ).join('');
 
         document.getElementById('content').innerHTML = `

@@ -9,6 +9,27 @@
         *{margin:0;padding:0;box-sizing:border-box}
         :root{--bg:#0a0a0a;--card:#151515;--text:#a0a0a0;--white:#f0f0f0;--accent:#00ff88;--danger:#ff4757;--border:#2a2a2a;--yellow:#ffd700;--blue:#3498db}
         body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
+        /* LOGIN SCREEN */
+        .login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh}
+        .login-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:3rem;max-width:400px;width:90%;text-align:center}
+        .login-box h2{color:var(--white);margin-bottom:.5rem}
+        .login-box p{color:var(--text);opacity:.5;font-size:.9rem;margin-bottom:2rem}
+        .login-box input{width:100%;padding:.9rem 1rem;background:#0d0d0d;border:1px solid var(--border);border-radius:10px;color:var(--white);font-size:1rem;margin-bottom:1rem;outline:none}
+        .login-box input:focus{border-color:var(--accent)}
+        .login-box button{width:100%;padding:.9rem;background:var(--accent);color:var(--bg);border:none;border-radius:10px;font-weight:700;font-size:1rem;cursor:pointer;transition:background .3s}
+        .login-box button:hover{background:#00dd77}
+        .login-box .err{color:var(--danger);font-size:.85rem;margin-top:.75rem;min-height:1.2rem}
+        .login-box .logo-login{font-size:1.3rem;font-weight:700;color:var(--white);margin-bottom:2rem}
+        .login-box .logo-login span{color:var(--accent)}
+        /* DASHBOARD */
+        .dash-tabs{display:flex;gap:.5rem;margin-bottom:1.5rem;flex-wrap:wrap}
+        .dash-tabs button{padding:.5rem 1rem;border:1px solid var(--border);background:transparent;color:var(--text);border-radius:8px;cursor:pointer;font-size:.85rem;transition:all .3s}
+        .dash-tabs button:hover,.dash-tabs button.active{border-color:var(--accent);color:var(--accent)}
+        /* SESSION TABLE */
+        .session-badge{display:inline-block;padding:3px 8px;border-radius:50px;font-size:.75rem;font-weight:700}
+        .session-badge.ok{background:rgba(0,255,136,.15);color:var(--accent)}
+        .session-badge.fail{background:rgba(255,71,87,.15);color:var(--danger)}
+        .session-badge.owner{background:rgba(52,152,219,.15);color:var(--blue)}
         /* NAV */
         nav{padding:1rem 5%;display:flex;justify-content:space-between;align-items:center;background:rgba(10,10,10,.95);border-bottom:1px solid var(--border)}
         nav .logo{color:var(--white);font-size:1.3rem;font-weight:700}
@@ -16,6 +37,8 @@
         nav .status{display:flex;align-items:center;gap:.5rem;font-size:.85rem}
         nav .dot{width:8px;height:8px;border-radius:50%;background:#555}
         nav .dot.online{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+        nav .logout-btn{background:transparent;border:1px solid var(--danger);color:var(--danger);padding:.4rem 1rem;border-radius:8px;cursor:pointer;font-size:.8rem;transition:all .3s}
+        nav .logout-btn:hover{background:var(--danger);color:var(--white)}
         /* MAIN */
         .container{max-width:1200px;margin:0 auto;padding:2rem 1rem}
         h1{color:var(--white);font-size:1.6rem;margin-bottom:.5rem}
@@ -67,6 +90,7 @@
         .refresh-btn{background:var(--accent);color:var(--bg);border:none;padding:.5rem 1.5rem;border-radius:8px;cursor:pointer;font-weight:700;font-size:.85rem;transition:opacity .3s}
         .refresh-btn:hover{opacity:.85}
         .header-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:1rem}
+        .hidden{display:none!important}
         @media(max-width:768px){
             .stats{grid-template-columns:1fr 1fr}
             table{font-size:.78rem}
@@ -75,15 +99,39 @@
     </style>
 </head>
 <body>
+    <!-- ==================== LOGIN SCREEN ==================== -->
+    <div class="login-screen" id="loginScreen">
+        <div class="login-box">
+            <div class="logo-login">CATYAMI <span>ADMIN</span></div>
+            <h2>Acesso Restrito</h2>
+            <p>Digite a senha de administrador</p>
+            <input type="password" id="adminPassInput" placeholder="Senha do admin" onkeydown="if(event.key==='Enter')doLogin()">
+            <button onclick="doLogin()"><i class="fas fa-sign-in-alt"></i> Entrar</button>
+            <div class="err" id="loginErr"></div>
+        </div>
+    </div>
+
+    <!-- ==================== DASHBOARD (hidden until login) ==================== -->
+    <div class="hidden" id="dashboardArea">
     <nav>
         <div class="logo">CATYAMI <span>ADMIN</span></div>
         <div class="status">
             <div class="dot" id="serverDot"></div>
             <span id="serverStatus">Conectando...</span>
+            <span id="ownerLabel" style="color:var(--accent);margin-left:.5rem;font-weight:700"></span>
         </div>
+        <button class="logout-btn" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Sair</button>
     </nav>
 
     <div class="container">
+        <!-- TABS -->
+        <div class="dash-tabs">
+            <button class="active" onclick="switchTab('orders', this)"><i class="fas fa-shopping-bag"></i> Pedidos</button>
+            <button onclick="switchTab('sessions', this)"><i class="fas fa-network-wired"></i> Sessoes & Logins</button>
+        </div>
+
+        <!-- ==================== ORDERS TAB ==================== -->
+        <div id="ordersTab">
         <div class="header-row">
             <div>
                 <h1>Painel de Vendas</h1>
@@ -147,6 +195,36 @@
                 <p>Nenhum pedido encontrado</p>
             </div>
         </div>
+        </div>
+
+        <!-- ==================== SESSIONS TAB ==================== -->
+        <div id="sessionsTab" class="hidden">
+        <div class="header-row">
+            <div>
+                <h1>Sessoes & Logins</h1>
+                <p class="subtitle">Historico de tentativas de acesso ao painel</p>
+            </div>
+            <button class="refresh-btn" onclick="loadSessions()"><i class="fas fa-sync-alt"></i> Atualizar</button>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>IP</th>
+                        <th>Resultado</th>
+                        <th>User Agent</th>
+                        <th>Data/Hora</th>
+                    </tr>
+                </thead>
+                <tbody id="sessionsBody"></tbody>
+            </table>
+            <div class="empty" id="emptySessions" hidden>
+                <i class="fas fa-shield-alt"></i>
+                <p>Nenhuma tentativa registrada</p>
+            </div>
+        </div>
+        </div>
     </div>
 
     <!-- DETAIL MODAL -->
@@ -157,17 +235,112 @@
             <div id="detailContent"></div>
         </div>
     </div>
+    </div><!-- end dashboardArea -->
 
     <script>
     const API = 'https://catyami-loja.onrender.com';
+    const OWNER_IP = '177.128.100.106';
     let allOrders = [];
     let currentFilter = 'all';
+    let authToken = localStorage.getItem('catyami_admin_token') || '';
+    let isOwner = false;
 
+    // ==================== AUTH ====================
+    async function doLogin() {
+        const pass = document.getElementById('adminPassInput').value;
+        const errEl = document.getElementById('loginErr');
+        errEl.textContent = '';
+
+        try {
+            const res = await fetch(`${API}/api/admin/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: pass })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                authToken = data.token;
+                isOwner = data.isOwner;
+                localStorage.setItem('catyami_admin_token', authToken);
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('dashboardArea').classList.remove('hidden');
+                checkServer();
+                loadOrders();
+                loadSessions();
+                if (isOwner) {
+                    document.getElementById('ownerLabel').textContent = '(Dono)';
+                }
+            } else {
+                errEl.textContent = 'Senha incorreta!';
+            }
+        } catch(e) {
+            errEl.textContent = 'Erro ao conectar ao servidor';
+        }
+    }
+
+    function doLogout() {
+        authToken = '';
+        localStorage.removeItem('catyami_admin_token');
+        document.getElementById('dashboardArea').classList.add('hidden');
+        document.getElementById('loginScreen').classList.remove('hidden');
+    }
+
+    function apiFetch(path, opts = {}) {
+        const headers = { ...(opts.headers || {}), 'x-admin-token': authToken };
+        return fetch(`${API}${path}`, { ...opts, headers });
+    }
+
+    // Check if already logged in
     window.addEventListener('load', () => {
-        checkServer();
-        loadOrders();
-        setInterval(loadOrders, 15000); // auto refresh 15s
+        if (authToken) {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('dashboardArea').classList.remove('hidden');
+            checkServer();
+            loadOrders();
+            loadSessions();
+        }
     });
+
+    function switchTab(tab, btn) {
+        document.querySelectorAll('.dash-tabs button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('ordersTab').classList.toggle('hidden', tab !== 'orders');
+        document.getElementById('sessionsTab').classList.toggle('hidden', tab !== 'sessions');
+    }
+
+    async function loadSessions() {
+        try {
+            const res = await apiFetch('/api/admin/sessions');
+            const sessions = await res.json();
+            const body = document.getElementById('sessionsBody');
+            const empty = document.getElementById('emptySessions');
+
+            if (sessions.length === 0) {
+                body.innerHTML = '';
+                empty.hidden = false;
+                return;
+            }
+
+            empty.hidden = true;
+            body.innerHTML = sessions.map(s => {
+                const date = new Date(s.attempt_at).toLocaleString('pt-BR');
+                const resultBadge = s.success ?
+                    (s.ip === OWNER_IP ?
+                        `<span class="session-badge owner">Dono - Sucesso</span>` :
+                        `<span class="session-badge ok">Sucesso</span>`) :
+                    `<span class="session-badge fail">FALHA - Acesso Negado</span>`;
+
+                return `<tr>
+                    <td><strong>#${s.id}</strong></td>
+                    <td><code style="color:var(--white)">${s.ip}</code>${s.ip !== OWNER_IP ? ' <span style="color:var(--danger);font-size:.7rem">IP NAO AUTORIZADO</span>' : ' <span style="color:var(--accent);font-size:.7rem">IP DONO</span>'}</td>
+                    <td>${resultBadge}</td>
+                    <td style="font-size:.7rem;opacity:.5;max-width:250px;word-break:break-all">${s.user_agent || 'N/A'}</td>
+                    <td style="white-space:nowrap">${date}</td>
+                </tr>`;
+            }).join('');
+        } catch(e) { console.log('Erro sessoes:', e); }
+    }
 
     async function checkServer() {
         try {
@@ -183,7 +356,8 @@
 
     async function loadOrders() {
         try {
-            const res = await fetch(`${API}/api/admin/orders`);
+            const res = await apiFetch('/api/admin/orders');
+            if (res.status === 401) { doLogout(); return; }
             allOrders = await res.json();
             applyFilter();
             updateStats();
