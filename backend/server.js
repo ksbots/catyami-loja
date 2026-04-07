@@ -6,6 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const archiver = require('archiver');
 const axios = require('axios');
+const crypto = require('crypto');
 
 // ==================== ASAAS CONFIG ====================
 const ASAAS_TOKEN = process.env.ASAAS_TOKEN;
@@ -15,6 +16,7 @@ if (!ASAAS_TOKEN) {
 const ASAAS_URL = process.env.NODE_ENV === 'production'
     ? 'https://api.asaas.com/v3'
     : (process.env.ASAAS_URL || 'https://sandbox.asaas.com/api/v3');
+const ASAAS_WEBHOOK_SECRET = process.env.ASAAS_WEBHOOK_SECRET;
 
 const asaasClient = axios.create({
     baseURL: ASAAS_URL,
@@ -274,16 +276,26 @@ app.post('/api/order/:id/receipt', upload.single('receipt'), async (req, res) =>
     }
 });
 
-// --- Webhook Asaas ---
-// Handle both notification (POST /payments) and direct payment events
-app.post('/api/webhook', async (req, res) => {
+// --- Webhook Asaas com verificação de assinatura ---
+app.post('/api/webhook', (req, res, next) => {
+    const signature = req.headers['asaas-signature'];
+    if (signature && ASAAS_WEBHOOK_SECRET) {
+        const hmac = crypto.createHmac('sha256', ASAAS_WEBHOOK_SECRET);
+        hmac.update(JSON.stringify(req.body));
+        const expected = hmac.digest('hex');
+        if (signature !== expected) {
+            console.log('Webhook Asaas: assinatura invalida');
+            return res.status(401).json({ error: 'Assinatura invalida' });
+        }
+    }
+    next();
+}, async (req, res) => {
     try {
         const body = req.body;
         console.log('Webhook Asaas recebido:', JSON.stringify(body).substring(0, 300));
 
         let chargeId, newStatus;
 
-        // Format 1: Asaas notification payload
         if (body.event === 'PAYMENT_RECEIVED' || body.event === 'PAYMENT_UPDATED' || body.event === 'PAYMENT_CREATED') {
             chargeId = body.payment?.id || body.payment?.id || body.data?.id;
             newStatus = body.payment?.status || body.data?.status;
