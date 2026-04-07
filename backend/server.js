@@ -8,8 +8,13 @@ const archiver = require('archiver');
 const axios = require('axios');
 
 // ==================== ASAAS CONFIG ====================
-const ASAAS_TOKEN = process.env.ASAAS_TOKEN || '$aact_prod_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OjRkNGM0ZWNhLTVjZjgtNDgxZC05OGJlLTYyYmVhZDkxYzgwYTo6JGFhY2hfZGNiNmRlMmYtYzdjNC00YmY2LWJhNjAtNGU1MWIwZjYzZTAy';
-const ASAAS_URL = 'https://api.asaas.com/v3';
+const ASAAS_TOKEN = process.env.ASAAS_TOKEN;
+if (!ASAAS_TOKEN) {
+    console.error('ERRO: ASAAS_TOKEN nao definido! Configure a variavel de ambiente.');
+}
+const ASAAS_URL = process.env.NODE_ENV === 'production'
+    ? 'https://api.asaas.com/v3'
+    : (process.env.ASAAS_URL || 'https://sandbox.asaas.com/api/v3');
 
 const asaasClient = axios.create({
     baseURL: ASAAS_URL,
@@ -172,11 +177,16 @@ app.post('/api/create-order', async (req, res) => {
         const chargeId = asaasResponse.data.id;
 
         // Consulta QR Code Pix
-        let pixQr = '', pixBrcode = '';
+        let pixQr = '', pixBrcode = '', qrCodeBase64 = '';
         try {
             const pixInfo = await asaasClient.get(`/payments/${chargeId}/pixQrCode`);
-            pixQr = pixInfo.data.payload || '';
+            pixQr = pixInfo.data.payload || pixInfo.data.qrCode || '';
             pixBrcode = pixInfo.data.brCode || pixQr;
+
+            // Se o Asaas retornar QR code em base64, usar diretamente
+            if (pixInfo.data.qrCodeBase64) {
+                qrCodeBase64 = `data:image/png;base64,${pixInfo.data.qrCodeBase64}`;
+            }
         } catch (pixErr) {
             console.log('Erro ao obter QR Pix:', pixErr.message);
         }
@@ -186,6 +196,7 @@ app.post('/api/create-order', async (req, res) => {
             [chargeId, pixQr, pixBrcode, asaasResponse.data.invoiceUrl || '', orderId]
         );
 
+        const paymentUrl = asaasResponse.data.invoiceUrl || '';
         console.log(`Pedido #${orderId} criado no Asaas: ${chargeId}`);
 
         res.json({
@@ -194,7 +205,8 @@ app.post('/api/create-order', async (req, res) => {
             asaas_charge_id: chargeId,
             pix_code: pixQr,
             pix_brcode: pixBrcode,
-            payment_url: asaasResponse.data.invoiceUrl || '',
+            qr_code_base64: qrCodeBase64,
+            payment_url: paymentUrl,
             price: prod.price,
             product_name: prod.name,
             due_date: asaasResponse.data.dueDate || ''
@@ -263,35 +275,62 @@ app.post('/api/order/:id/receipt', upload.single('receipt'), async (req, res) =>
 });
 
 // --- Webhook Asaas ---
+// Handle both notification (POST /payments) and direct payment events
 app.post('/api/webhook', async (req, res) => {
     try {
         const body = req.body;
+        console.log('Webhook Asaas recebido:', JSON.stringify(body).substring(0, 300));
 
-        // Asaas sends: event, charge (with id, status, etc)
-        const chargeId = body?.charge?.id || body?.data?.charge || body?.id;
-        const newStatus = body?.charge?.status || body?.data?.status || body?.status;
+        let chargeId, newStatus;
 
-        console.log('Webhook Asaas recebido:', JSON.stringify(body).substring(0, 200));
+        // Format 1: Asaas notification payload
+        if (body.event === 'PAYMENT_RECEIVED' || body.event === 'PAYMENT_UPDATED' || body.event === 'PAYMENT_CREATED') {
+            chargeId = body.payment?.id || body.payment?.id || body.data?.id;
+            newStatus = body.payment?.status || body.data?.status;
+        }
+        // Format 2: Direct payment object
+        else if (body.id && body.billingType === 'PIX') {
+            chargeId = body.id;
+            newStatus = body.status;
+        }
+        // Format 3: Nested charge
+        else if (body.charge?.id) {
+            chargeId = body.charge.id;
+            newStatus = body.charge.status;
+        }
+        // Format 4: Generic fallback
+        else {
+            chargeId = body?.payment?.id || body?.data?.id || body?.id;
+            newStatus = body?.payment?.status || body?.data?.status || body?.status;
+        }
 
-        // Log webhook
+        // Always log webhook
         await dbRun(
             `INSERT INTO webhooks (charge_id, status, payload) VALUES (?, ?, ?)`,
             [chargeId, newStatus, JSON.stringify(body)]
         );
 
-        // Se pagamento confirmado (RECEIVED = payment received by Asaas)
+        // If payment confirmed — APPROVE ORDER
         if (chargeId && (newStatus === 'RECEIVED' || newStatus === 'CONFIRMED')) {
             await dbRun(
                 `UPDATE orders SET status = 'approved', updated_at = CURRENT_TIMESTAMP WHERE asaas_charge_id = ? AND status != 'approved'`,
                 [chargeId]
             );
-            console.log(`Pagamento aprovado via webhook: ${chargeId}`);
+            console.log(` Pagamento aprovado via webhook: ${chargeId}`);
+        }
+
+        // Also handle overdue/overdue payments
+        if (chargeId && (newStatus === 'OVERDUE' || newStatus === 'REFUNDED' || newStatus === 'CHARGEBACK_REQUESTED')) {
+            await dbRun(
+                `UPDATE orders SET status = 'rejected', updated_at = CURRENT_TIMESTAMP WHERE asaas_charge_id = ? AND status = 'pending'`,
+                [chargeId]
+            );
+            console.log(` Pagamento ${newStatus.toLowerCase()} via webhook: ${chargeId}`);
         }
 
         res.status(200).json({ success: true });
     } catch (error) {
-        const errMsg = error.response?.data?.error || error.message;
-        console.log('Erro no webhook Asaas:', errMsg);
+        console.log('Erro no webhook Asaas:', error.message);
         res.status(200).json({ received: true });
     }
 });
