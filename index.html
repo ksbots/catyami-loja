@@ -292,7 +292,7 @@ defrag C: /U /V</div>
                     <div id="qrCode"></div>
                 </div>
                 <div class="pix-key">
-                    <input type="text" id="pixKeyInput" value="43427ffd-4432-47f0-b41a-c85272a1f3ca" readonly>
+                    <input type="text" id="pixKeyInput" value="Aguardando gerar Pix..." readonly>
                     <button onclick="copyPixKey()">Copiar</button>
                 </div>
                 <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
@@ -563,6 +563,30 @@ defrag C: /U /V</div>
             });
         }
     });
+
+    function copyPixKey() {
+        const pixInput = document.getElementById('pixKeyInput');
+        if (pixInput && pixInput.value && pixInput.value !== 'Aguardando gerar Pix...') {
+            navigator.clipboard.writeText(pixInput.value).then(() => {
+                const btn = document.querySelector('.pix-key button');
+                btn.textContent = 'Copiado!';
+                setTimeout(() => { btn.textContent = 'Copiar'; }, 2000);
+            }).catch(() => {
+                pixInput.focus();
+                pixInput.select();
+                try {
+                    navigator.clipboard.writeText(pixInput.value);
+                    const btn = document.querySelector('.pix-key button');
+                    btn.textContent = 'Copiado!';
+                    setTimeout(() => { btn.textContent = 'Copiar'; }, 2000);
+                } catch(e) {
+                    alert('Selecione e copie a chave Pix manualmente');
+                }
+            });
+        } else {
+            alert('O QR Code Pix ainda nao foi gerado. Aguarde alguns segundos.');
+        }
+    }
 
     /* ==================== CONFIRMAR ==================== */
     async function confirmPayment() {

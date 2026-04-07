@@ -165,16 +165,59 @@ app.post('/api/create-order', async (req, res) => {
         const result = await dbGet('SELECT * FROM orders ORDER BY id DESC LIMIT 1');
         const orderId = result.id;
 
+        // Primeiro cria o customer no Asaas
+        let customerId;
+        try {
+            const customerPayload = {
+                name: customer_name || 'Cliente Catyami',
+                email: customer_email || `cliente${orderId}@catyami.com`
+            };
+            if (customer_cpf) {
+                customerPayload.cpfCnpj = customer_cpf;
+            }
+            const customerResp = await asaasClient.post('/customers', customerPayload);
+            customerId = customerResp.data.id;
+        } catch (custErr) {
+            console.log('Erro ao criar customer:', custErr.message);
+            // Se ja existe, busca pelo email
+            try {
+                const searchResp = await asaasClient.get('/customers', { params: { email: customer_email || `cliente${orderId}@catyami.com` }});
+                if (searchResp.data.data && searchResp.data.data.length > 0) {
+                    customerId = searchResp.data.data[0].id;
+                }
+            } catch (searchErr) {
+                console.log('Erro ao buscar customer:', searchErr.message);
+            }
+        }
+
+        if (!customerId) {
+            // Fallback: cria customer com nome generico e cpf nao fornecido
+            try {
+                const fallbackResp = await asaasClient.post('/customers', {
+                    name: 'Cliente ' + orderId,
+                    email: `cliente${orderId}@catyami.com`
+                });
+                customerId = fallbackResp.data.id;
+            } catch (fbErr) {
+                return res.status(500).json({ error: 'Erro ao criar cliente no Asaas: ' + fbErr.message });
+            }
+        }
+
         // Cria cobranca Pix no Asaas
-        const asaasResponse = await asaasClient.post('/payments', {
-            billingType: 'PIX',
-            value: prod.price,
-            dueDate: new Date().toISOString().split('T')[0],
-            description: `Catyami Otimizacao - ${prod.name}`,
-            externalReference: String(orderId),
-            customer: customer_name || 'Cliente Catyami',
-            customerEmail: customer_email || `cliente${orderId}@catyami.com`
-        });
+        let asaasResponse;
+        try {
+            asaasResponse = await asaasClient.post('/payments', {
+                customer: customerId,
+                billingType: 'PIX',
+                value: prod.price,
+                dueDate: new Date().toISOString().split('T')[0],
+                description: `Catyami Otimizacao - ${prod.name}`,
+                externalReference: String(orderId)
+            });
+        } catch (payErr) {
+            console.log('Erro ao criar payment:', JSON.stringify(payErr.response?.data));
+            throw payErr;
+        }
 
         const chargeId = asaasResponse.data.id;
 
